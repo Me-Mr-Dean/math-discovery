@@ -3,7 +3,7 @@
 Quick Prime Analysis - Simple script to get started
 """
 
-from prime_ml_analyzer import PrimePatternAnalyzer
+from src.analyzers.prime_analyzer import PrimePatternAnalyzer
 
 
 def quick_analysis(dataset_path):
@@ -82,7 +82,7 @@ def batch_test(prime_function, start=100, end=200):
 
 if __name__ == "__main__":
     # Quick start - adjust the path to your dataset
-    dataset_path = "ml_dataset1_odd_endings.csv"  # Change this to your actual file
+    dataset_path = "../../data/raw/ml_dataset1_odd_endings.csv"  # Change this to your actual file
 
     try:
         # Run analysis

@@ -10,7 +10,7 @@ __author__ = "Your Name"
 __email__ = "your.email@example.com"
 
 from .core import discovery_engine, feature_extractor, pattern_analyzer
-from .generators import prime_generator, sequence_generator
+from .generators from src.generators import prime_generator, sequence_generator
 from .analyzers import prime_analyzer, oeis_analyzer
 
 __all__ = [

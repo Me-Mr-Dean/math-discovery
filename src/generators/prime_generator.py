@@ -14,7 +14,7 @@ import time
 
 
 class PrimeCSVGenerator:
-    def __init__(self, input_file="1m.csv", output_dir="output"):
+    def __init__(self, input_file="../../data/raw/1m.csv", output_dir="output"):
         """
         Initialize the Prime CSV Generator
 
@@ -220,7 +220,7 @@ class PrimeCSVGenerator:
 
         filename = f"dataset1_odd_endings{'_sample' if sample_size else ''}.csv"
         if include_metadata:
-            filename = f"ml_dataset1_odd_endings{'_sample' if sample_size else ''}.csv"
+            filename = f"../../data/raw/ml_dataset1_odd_endings{'_sample' if sample_size else ''}.csv"
 
         self.save_matrix_to_csv(df, filename, "Dataset 1 - Odd Endings")
         return df
@@ -239,7 +239,7 @@ class PrimeCSVGenerator:
 
         filename = f"dataset2_all_digits{'_sample' if sample_size else ''}.csv"
         if include_metadata:
-            filename = f"ml_dataset2_all_digits{'_sample' if sample_size else ''}.csv"
+            filename = f"../../data/raw/ml_dataset2_all_digits{'_sample' if sample_size else ''}.csv"
 
         self.save_matrix_to_csv(df, filename, "Dataset 2 - All Digits")
         return df
@@ -279,7 +279,7 @@ class PrimeCSVGenerator:
         filename = f"dataset3_prime_endings{'_sample' if sample_size else ''}.csv"
         if include_metadata:
             filename = (
-                f"ml_dataset3_prime_endings{'_sample' if sample_size else ''}.csv"
+                f"../../data/raw/ml_dataset3_prime_endings{'_sample' if sample_size else ''}.csv"
             )
 
         self.save_matrix_to_csv(
@@ -459,7 +459,7 @@ def main():
 
     except FileNotFoundError as e:
         print(f"❌ Error: {e}")
-        print("Make sure '1m.csv' is in the same directory as this script.")
+        print("Make sure '../../data/raw/1m.csv' is in the same directory as this script.")
 
     except Exception as e:
         print(f"❌ Error: {e}")
