@@ -1,0 +1,28 @@
+# Default configuration for Mathematical Pattern Discovery Engine
+discovery:
+  max_sequences: 1000
+  feature_types:
+    - modular_arithmetic
+    - digit_patterns
+    - prime_gaps
+    - statistical_features
+  
+ml_models:
+  random_forest:
+    n_estimators: 100
+    max_depth: 10
+    random_state: 42
+  
+  neural_network:
+    hidden_layers: [128, 64, 32]
+    activation: relu
+    dropout: 0.2
+    
+performance:
+  batch_size: 1000
+  parallel_processing: true
+  max_memory_gb: 8
+
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

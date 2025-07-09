@@ -1,0 +1,16 @@
+# Prime-specific configuration
+prime_analysis:
+  max_prime: 1000000
+  wheel_factorization: [2, 3, 5]
+  gap_analysis: true
+  
+features:
+  - prime_gaps
+  - twin_primes
+  - safe_primes
+  - wilson_test
+  - fermat_test
+  
+validation:
+  known_primes_file: "data/raw/known_primes.txt"
+  test_percentage: 0.2

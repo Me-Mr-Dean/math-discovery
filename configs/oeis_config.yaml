@@ -1,0 +1,17 @@
+# OEIS sequence analysis configuration
+oeis:
+  sequences:
+    - A000040  # Prime numbers
+    - A001924  # Sequence related to prime gaps
+    - A007694  # Another mathematical sequence
+  
+  analysis:
+    max_terms: 10000
+    pattern_window: 50
+    correlation_threshold: 0.8
+    
+  features:
+    - sequence_differences
+    - ratio_analysis
+    - periodicity_check
+    - growth_patterns
