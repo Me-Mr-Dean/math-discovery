@@ -3,7 +3,7 @@
 Quick Prime Analysis - Simple script to get started
 """
 
-from src.analyzers.prime_analyzer import PrimePatternAnalyzer
+from src.analyzers.prime_analyzer import PurePrimeMLDiscovery
 
 
 def quick_analysis(dataset_path):
@@ -13,10 +13,10 @@ def quick_analysis(dataset_path):
     print("=" * 50)
 
     # Initialize analyzer
-    analyzer = PrimePatternAnalyzer(dataset_path)
+    analyzer = PurePrimeMLDiscovery(dataset_path)
 
     # Run full analysis
-    prime_function = analyzer.run_full_analysis()
+    prime_function = analyzer.run_pure_discovery()
 
     print("\n🎯 Testing the extracted function:")
     print("-" * 30)

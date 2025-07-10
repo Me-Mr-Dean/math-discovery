@@ -4,7 +4,7 @@ Command-line interface for mathematical pattern discovery
 """
 
 import argparse
-from ..core import discovery_engine
+from src.core.discovery_engine import UniversalMathDiscovery
 
 def main():
     parser = argparse.ArgumentParser(description="Discover mathematical patterns")
@@ -16,15 +16,21 @@ def main():
     # Parse sequence
     sequence = [int(x.strip()) for x in args.sequence.split(",")]
     
-    # Initialize engine
-    engine = discovery_engine.DiscoveryEngine(config_path=args.config)
-    
-    # Discover patterns
-    patterns = engine.discover_patterns(sequence)
-    
-    print("Discovered patterns:")
-    for pattern in patterns:
-        print(f"- {pattern}")
+    # Initialize discovery engine using the provided sequence
+    engine = UniversalMathDiscovery(
+        target_function=lambda n: n in sequence,
+        function_name="Input Sequence",
+        max_number=max(sequence),
+    )
+
+    prediction_fn = engine.run_complete_discovery()
+
+    print("Discovered predictions for input sequence:")
+    for n in sequence:
+        result = prediction_fn(n)
+        print(
+            f"{n}: prediction={result['prediction']} (prob: {result['probability']:.3f})"
+        )
 
 if __name__ == "__main__":
     main()

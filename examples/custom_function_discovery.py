@@ -3,7 +3,7 @@
 Example of discovering patterns in custom mathematical functions
 """
 
-from math_discovery.core import discovery_engine
+from src.core.discovery_engine import UniversalMathDiscovery
 import math
 
 def fibonacci(n):
@@ -25,14 +25,20 @@ def main():
     fib_sequence = fibonacci(50)
     
     # Initialize discovery engine
-    engine = discovery_engine.DiscoveryEngine()
-    
-    # Discover patterns
-    patterns = engine.discover_patterns(fib_sequence)
-    
-    print("Patterns discovered in Fibonacci sequence:")
-    for pattern in patterns:
-        print(f"- {pattern}")
+    engine = UniversalMathDiscovery(
+        target_function=lambda n: n in fib_sequence,
+        function_name="Fibonacci Numbers",
+        max_number=max(fib_sequence),
+    )
+
+    prediction_fn = engine.run_complete_discovery()
+
+    print("Predictions for Fibonacci sequence members:")
+    for n in fib_sequence:
+        result = prediction_fn(n)
+        print(
+            f"{n}: prediction={result['prediction']} (prob: {result['probability']:.3f})"
+        )
 
 if __name__ == "__main__":
     main()
