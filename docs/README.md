@@ -13,7 +13,8 @@ Welcome to the documentation for the Mathematical Pattern Discovery Engine.
 ## Quick Start
 
 ```python
-from math_discovery.core.discovery_engine import UniversalMathDiscovery
+# After installing the package, import from ``src``
+from src.core.discovery_engine import UniversalMathDiscovery
 
 # Initialize the discovery engine
 engine = UniversalMathDiscovery(lambda n: n % 2 == 0, "Even Numbers")
