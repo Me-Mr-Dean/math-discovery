@@ -2,6 +2,8 @@
 """
 Quick test to verify the migration worked correctly
 """
+import pytest
+pytest.skip("Utility script not part of unit tests", allow_module_level=True)
 
 import sys
 from pathlib import Path

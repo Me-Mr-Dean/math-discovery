@@ -120,8 +120,26 @@ def is_prime(n: int) -> bool:
     return True
 
 
-def generate_mathematical_features(number: int) -> dict:
-    """Generate comprehensive mathematical features for a number"""
+def generate_mathematical_features(
+    number: int,
+    previous_numbers: List[int] | None = None,
+    window_size: int = 5,
+    digit_tensor: bool = False,
+) -> dict:
+    """Generate comprehensive mathematical features for a number.
+
+    Args:
+        number: The current integer to featurize.
+        previous_numbers: Optional list of prior numbers in the sequence. When
+            provided, difference/ratio and sliding window statistics will be
+            computed using this history.
+        window_size: Window length for mean/std statistics of ``previous_numbers``.
+        digit_tensor: If True, include an array representation of the digits.
+    """
+
+    if previous_numbers is None:
+        previous_numbers = []
+
     features = {
         # Basic properties
         "number": number,
@@ -149,7 +167,7 @@ def generate_mathematical_features(number: int) -> dict:
         "is_perfect_square": int(int(np.sqrt(number)) ** 2 == number),
         "is_perfect_cube": int(round(number ** (1/3)) ** 3 == number),
         "is_power_of_2": int(is_power_of_2(number)),
-        
+
         # Number theory
         "prime_factors_count": len(prime_factors(number)),
         "unique_prime_factors": len(get_unique_prime_factors(number)),
@@ -157,5 +175,42 @@ def generate_mathematical_features(number: int) -> dict:
         "is_prime": is_prime(number),
         "sum_of_proper_divisors": sum_of_divisors(number) if number <= 10000 else 0,
     }
-    
+
+    # Additional modular arithmetic features used by the discovery engine
+    features.update({
+        "mod_11": number % 11,
+        "mod_13": number % 13,
+    })
+
+    # Extra digit and positional patterns
+    features.update({
+        "alternating_digit_sum": sum((-1) ** i * int(d) for i, d in enumerate(str(number))),
+        "is_triangular": int(int(((8 * number + 1) ** 0.5 - 1) / 2) ** 2 == number),
+        "is_6n_plus_1": int(number % 6 == 1),
+        "is_6n_minus_1": int(number % 6 == 5),
+        "twin_candidate": int((number % 6) in [1, 5]),
+        "wheel_2_3": number % 6,
+        "wheel_2_3_5": number % 30,
+        "wheel_2_3_5_7": number % 210,
+        "sum_of_digits_mod_9": sum(int(d) for d in str(number)) % 9,
+        "is_happy": int(is_happy_number(number)) if number <= 10000 else 0,
+    })
+
+    # Difference and ratio to the previous number
+    if previous_numbers:
+        prev = previous_numbers[-1]
+        features["diff_n"] = number - prev
+        features["ratio_n"] = number / prev if prev != 0 else 0.0
+        window = previous_numbers[-window_size:]
+        features[f"mean_last_{window_size}"] = float(np.mean(window)) if window else 0.0
+        features[f"std_last_{window_size}"] = float(np.std(window)) if window else 0.0
+    else:
+        features["diff_n"] = 0.0
+        features["ratio_n"] = 0.0
+        features[f"mean_last_{window_size}"] = 0.0
+        features[f"std_last_{window_size}"] = 0.0
+
+    if digit_tensor:
+        features["digit_tensor"] = np.array([int(d) for d in str(number)], dtype=int)
+
     return features
