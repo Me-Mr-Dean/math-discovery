@@ -5,25 +5,32 @@
 ### discovery_engine
 
 Main discovery engine for pattern analysis.
+Supports difference/ratio features and optional Fourier or PCA embeddings of
+digit sequences.
 
 ```python
-class DiscoveryEngine:
-    def __init__(self, config_path=None):
+class UniversalMathDiscovery:
+    def __init__(
+        self,
+        target_function,
+        function_name,
+        max_number=100000,
+        embedding=None,
+        embedding_components=None,
+    ):
         """Initialize the discovery engine."""
-        pass
-    
-    def discover_patterns(self, sequence):
-        """Discover patterns in a mathematical sequence."""
-        pass
-    
-    def predict_next_terms(self, sequence, n_terms=5):
-        """Predict the next n terms in a sequence."""
-        pass
+        ...
+
+    def run_complete_discovery(self):
+        """Run training and analysis on the target function."""
+        ...
 ```
 
 ### feature_extractor
 
-Mathematical feature extraction utilities.
+Mathematical feature extraction utilities. When previous numbers are supplied,
+the extractor computes difference and ratio features and sliding window
+statistics.
 
 ```python
 class FeatureExtractor:
