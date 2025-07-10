@@ -31,7 +31,8 @@ def fibonacci_test(n):
 discoverer = UniversalMathDiscovery(
     target_function=fibonacci_test,
     function_name="Fibonacci Numbers",
-    max_number=1000
+    max_number=1000,
+    embedding="fourier",  # optional: use "fourier" or "pca"
 )
 
 # Let AI discover the mathematical patterns

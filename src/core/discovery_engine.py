@@ -39,6 +39,7 @@ import time
 from typing import Callable, Dict, List, Tuple, Any
 
 from ..utils.math_utils import generate_mathematical_features
+from ..utils.embedding_utils import fourier_transform, pca_transform
 
 warnings.filterwarnings("ignore")
 
@@ -59,6 +60,8 @@ class UniversalMathDiscovery:
         target_function: Callable[[int], bool],
         function_name: str,
         max_number: int = 100000,
+        embedding: str | None = None,
+        embedding_components: int | None = None,
     ):
         """
         Initialize the Universal Mathematical Discovery Engine
@@ -67,6 +70,8 @@ class UniversalMathDiscovery:
             target_function: A function that takes an integer and returns True/False
             function_name: Descriptive name for the function being analyzed
             max_number: Maximum number to analyze
+            embedding: Optional embedding method ("fourier" or "pca")
+            embedding_components: Number of components for the embedding
         """
         self.target_function = target_function
         self.function_name = function_name
@@ -77,6 +82,8 @@ class UniversalMathDiscovery:
         self.feature_names = []
         self.scaler = StandardScaler() if StandardScaler else None
         self.analysis_results = {}
+        self.embedding = embedding
+        self.embedding_components = embedding_components
 
     def generate_fibonacci_set(self, max_n: int) -> set:
         """Generate Fibonacci numbers up to max_n"""
@@ -135,6 +142,7 @@ class UniversalMathDiscovery:
 
         features_list = []
         target_list = []
+        digit_tensors: List[List[int]] = []
 
         start_time = time.time()
         history: List[int] = []
@@ -150,7 +158,13 @@ class UniversalMathDiscovery:
                 )
 
             # Extract mathematical features
-            features = generate_mathematical_features(number, previous_numbers=history)
+            features = generate_mathematical_features(
+                number,
+                previous_numbers=history,
+                digit_tensor=self.embedding is not None,
+            )
+            if self.embedding is not None:
+                digit_tensors.append(list(features.pop("digit_tensor")))
 
             # Function-specific optimizations
             if fibonacci_set is not None:
@@ -165,6 +179,26 @@ class UniversalMathDiscovery:
         # Convert to DataFrame
         self.X = pd.DataFrame(features_list)
         self.y = np.array(target_list)
+
+        if self.embedding is not None and digit_tensors:
+            max_len = max(len(d) for d in digit_tensors)
+            padded = [d + [0] * (max_len - len(d)) for d in digit_tensors]
+            if self.embedding == "fourier":
+                transformed = [
+                    fourier_transform(d, self.embedding_components)
+                    for d in padded
+                ]
+                prefix = "fourier"
+            elif self.embedding == "pca":
+                components = self.embedding_components or min(max_len, 2)
+                transformed = pca_transform(padded, components)
+                prefix = "pca"
+            else:
+                raise ValueError(f"Unknown embedding method: {self.embedding}")
+            cols = len(transformed[0]) if transformed else 0
+            for i in range(cols):
+                self.X[f"{prefix}_{i}"] = [row[i] for row in transformed]
+
         self.feature_names = list(self.X.columns)
 
         positive_rate = self.y.mean()

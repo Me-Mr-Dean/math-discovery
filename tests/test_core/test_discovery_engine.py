@@ -20,3 +20,13 @@ class TestDiscoveryEngine:
         # patterns = engine.discover_patterns(sequence)
         # assert len(patterns) > 0
         pass
+
+    def test_universal_math_discovery_embedding_option(self):
+        """Ensure embedding argument is accepted"""
+        engine = discovery_engine.UniversalMathDiscovery(
+            discovery_engine.powers_of_2,
+            "Powers of 2",
+            max_number=10,
+            embedding="fourier",
+        )
+        assert engine.embedding == "fourier"
