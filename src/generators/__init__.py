@@ -1,7 +1,13 @@
-"""Generator subpackage with universal dataset generation."""
+"""Data generators for mathematical sequences."""
+
+from .universal_generator import UniversalDatasetGenerator, MathematicalRule
+from .prime_generator import PrimeGenerator, PrimeCSVGenerator
+from .sequence_generator import SequenceGenerator
 
 __all__ = [
-    "prime_generator",
-    "sequence_generator",
-    "universal_generator",  # Add this line
+    "UniversalDatasetGenerator",
+    "MathematicalRule",
+    "PrimeGenerator",
+    "PrimeCSVGenerator", 
+    "SequenceGenerator",
 ]

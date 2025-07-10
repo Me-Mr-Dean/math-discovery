@@ -5,43 +5,19 @@ A machine learning-powered mathematical discovery system for uncovering
 hidden patterns in number theory and mathematical sequences.
 """
 
-__version__ = "0.1.0"
-__author__ = "Your Name"
-__email__ = "your.email@example.com"
+__version__ = "1.0.0"
+__author__ = "Mathematical Research Team"
 
-# Lazy imports to avoid heavy dependencies during package initialization
-# Submodules can be imported explicitly by users when needed.
+# Core functionality
+from .core.discovery_engine import UniversalMathDiscovery
+from .generators.universal_generator import UniversalDatasetGenerator, MathematicalRule
+
+# Utility imports
+from .utils.math_utils import generate_mathematical_features
 
 __all__ = [
-    "discovery_engine",
-    "feature_extractor",
-    "pattern_analyzer",
-    "prime_generator",
-    "sequence_generator",
-    "prime_analyzer",
-    "oeis_analyzer",
+    "UniversalMathDiscovery",
+    "UniversalDatasetGenerator", 
+    "MathematicalRule",
+    "generate_mathematical_features",
 ]
-
-def __getattr__(name):
-    if name == "discovery_engine":
-        from .core import discovery_engine
-        return discovery_engine
-    if name == "feature_extractor":
-        from .core import feature_extractor
-        return feature_extractor
-    if name == "pattern_analyzer":
-        from .core import pattern_analyzer
-        return pattern_analyzer
-    if name == "prime_generator":
-        from .generators import prime_generator
-        return prime_generator
-    if name == "sequence_generator":
-        from .generators import sequence_generator
-        return sequence_generator
-    if name == "prime_analyzer":
-        from .analyzers import prime_analyzer
-        return prime_analyzer
-    if name == "oeis_analyzer":
-        from .analyzers import oeis_analyzer
-        return oeis_analyzer
-    raise AttributeError(f"module 'src' has no attribute {name}")

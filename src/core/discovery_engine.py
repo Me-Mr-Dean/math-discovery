@@ -32,7 +32,6 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 try:
-    from core.discovery_engine import UniversalMathDiscovery
     from utils.path_utils import find_data_file, get_data_directory
     from analyzers.prime_analyzer import PurePrimeMLDiscovery
     from analyzers.oeis_analyzer import a007694_property
