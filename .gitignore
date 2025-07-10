@@ -1,5 +1,11 @@
-# Datasets folder
+# Mathematical Pattern Discovery Engine - .gitignore
+
+# Large datasets (keep these ignored as they're very large)
 data/
+*.csv
+1m.csv
+ml_dataset*.csv
+dataset*.csv
 
 # Python
 __pycache__/
@@ -154,9 +160,31 @@ Desktop.ini
 *.jpeg
 *.gif
 *.pdf
-output.csv
+
+# ML model files  
+*.pkl
+*.joblib
+*.h5
+*.model
 
 # Temporary files
 *.tmp
 *.temp
 *~
+
+# Backup files (we're removing the backup_original folder)
+backup_*/
+*_backup/
+*.bak
+
+# Large result files
+results/
+output/
+models/
+
+# OS generated files
+.DS_Store?
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
