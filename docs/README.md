@@ -13,13 +13,13 @@ Welcome to the documentation for the Mathematical Pattern Discovery Engine.
 ## Quick Start
 
 ```python
-from math_discovery.core import discovery_engine
+from math_discovery.core.discovery_engine import UniversalMathDiscovery
 
 # Initialize the discovery engine
-engine = discovery_engine.DiscoveryEngine()
+engine = UniversalMathDiscovery(lambda n: n % 2 == 0, "Even Numbers")
 
 # Analyze a mathematical sequence
-results = engine.discover_patterns([2, 3, 5, 7, 11, 13, 17, 19, 23])
+results = engine.run_complete_discovery()
 ```
 
 ## Project Structure
@@ -31,3 +31,9 @@ The project is organized into several key modules:
 - `analyzers/` - Specialized mathematical analyzers
 - `utils/` - Utility functions and helpers
 - `cli/` - Command-line interfaces
+
+## New Capabilities
+
+- Difference and ratio-based features for sequence analysis
+- Prefix–suffix dataset generation utilities
+- Optional Fourier or PCA embeddings of digit sequences
