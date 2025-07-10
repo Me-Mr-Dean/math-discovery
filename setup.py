@@ -94,6 +94,8 @@ setup(
             "math-discover=src.cli.discover:main",
             "math-generate=src.cli.generate:main",
             "math-analyze=src.cli.analyze:main",
+            "math-discover-interactive=scripts.interactive_discovery:main",
+            "math-discover-patterns=scripts.discover_patterns:main",
         ],
     },
     include_package_data=True,

@@ -219,6 +219,52 @@ Our discoveries are validated against established mathematical databases:
 - Custom function analysis and pattern discovery
 - Scalable up to millions of numbers
 
+
+
+## 🎯 **Interactive Pattern Discovery**
+
+### **🆕 Enhanced Interactive Mode**
+
+The discovery engine now features an intuitive interactive interface that works seamlessly with Universal Dataset Generator outputs:
+
+```bash
+# Interactive discovery mode - analyze any generated datasets
+python scripts/interactive_discovery.py
+
+# Command-line discovery interface
+python scripts/discover_patterns.py interactive
+
+# List available datasets for analysis
+python scripts/discover_patterns.py list
+
+# Analyze specific dataset
+python scripts/discover_patterns.py analyze data/output/perfect_squares/algebraic_features_up_to_10000.csv
+
+# Analyze all datasets in a folder
+python scripts/discover_patterns.py folder data/output/perfect_squares/
+```
+
+### **🔍 Smart Dataset Detection**
+
+Automatically discovers and categorizes:
+- **Universal Generator Outputs** - All ML-ready datasets in `data/output/`
+- **Legacy Datasets** - Existing datasets in `data/raw/`
+- **Multiple Formats** - Prefix-suffix matrices, digit tensors, sequence patterns, algebraic features
+
+### **⚙️ Flexible Analysis Modes**
+
+- **Quick Mode** - Fast analysis with smaller samples
+- **Standard Mode** - Balanced performance and thoroughness  
+- **Deep Mode** - Comprehensive analysis with embeddings
+- **Custom Mode** - Full control over all parameters
+
+### **📊 Comparative Analysis**
+
+- **Single Dataset** - Deep dive into one dataset
+- **Rule Comparison** - Compare multiple formats for the same mathematical rule
+- **Comprehensive** - Analyze all available datasets with summary reports
+- **Auto-Selection** - Intelligent selection of best datasets for analysis
+
 ## 📁 **Project Structure**
 
 ```
