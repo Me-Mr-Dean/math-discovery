@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
+
 """
 Universal Mathematical Discovery Engine
 Discover patterns and structure in any number-theoretic function using machine learning.
@@ -26,7 +27,9 @@ try:
     from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
     from sklearn.preprocessing import StandardScaler
 except Exception:  # pragma: no cover - optional dependency
-    train_test_split = cross_val_score = RandomForestClassifier = GradientBoostingClassifier = None
+    train_test_split = cross_val_score = RandomForestClassifier = (
+        GradientBoostingClassifier
+    ) = None
     LogisticRegression = DecisionTreeClassifier = export_text = None
     classification_report = confusion_matrix = roc_auc_score = None
     StandardScaler = None
@@ -38,8 +41,26 @@ import warnings
 import time
 from typing import Callable, Dict, List, Tuple, Any
 
-from ..utils.math_utils import generate_mathematical_features
-from ..utils.embedding_utils import fourier_transform, pca_transform
+# Fixed imports - use absolute imports or try both relative and absolute
+try:
+    # Try relative import first (when used as package)
+    from ..utils.math_utils import generate_mathematical_features
+    from ..utils.embedding_utils import fourier_transform, pca_transform
+except ImportError:
+    try:
+        # Fall back to absolute import (when run as script)
+        from utils.math_utils import generate_mathematical_features
+        from utils.embedding_utils import fourier_transform, pca_transform
+    except ImportError:
+        # Final fallback - direct path manipulation
+        import sys
+        from pathlib import Path
+
+        current_dir = Path(__file__).parent
+        project_root = current_dir.parent.parent
+        sys.path.insert(0, str(project_root / "src"))
+        from utils.math_utils import generate_mathematical_features
+        from utils.embedding_utils import fourier_transform, pca_transform
 
 warnings.filterwarnings("ignore")
 
@@ -175,8 +196,7 @@ class UniversalMathDiscovery:
             padded = [d + [0] * (max_len - len(d)) for d in digit_tensors]
             if self.embedding == "fourier":
                 transformed = [
-                    fourier_transform(d, self.embedding_components)
-                    for d in padded
+                    fourier_transform(d, self.embedding_components) for d in padded
                 ]
                 prefix = "fourier"
             elif self.embedding == "pca":
