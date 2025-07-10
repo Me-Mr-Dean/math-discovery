@@ -120,11 +120,96 @@ def is_prime(n: int) -> bool:
     return True
 
 
+def distance_to_next(number: int, number_set: Set[int]) -> int:
+    """Distance from ``number`` to the next higher element in ``number_set``.
+
+    Returns ``0`` if no larger element exists.
+    """
+    higher = [n for n in number_set if n > number]
+    return min(higher) - number if higher else 0
+
+
+def distance_to_prev(number: int, number_set: Set[int]) -> int:
+    """Distance from ``number`` to the previous lower element in ``number_set``.
+
+    Returns ``0`` if no smaller element exists.
+    """
+    lower = [n for n in number_set if n < number]
+    return number - max(lower) if lower else 0
+
+
+def _solve_linear_system(a: List[List[float]], b: List[float]) -> List[float]:
+    """Solve Ax=b using Gaussian elimination."""
+    n = len(a)
+    A = [row[:] for row in a]
+    x = b[:]
+
+    for i in range(n):
+        # pivot selection
+        max_row = max(range(i, n), key=lambda r: abs(A[r][i]))
+        A[i], A[max_row] = A[max_row], A[i]
+        x[i], x[max_row] = x[max_row], x[i]
+
+        pivot = A[i][i]
+        if pivot == 0:
+            continue
+        inv = 1.0 / pivot
+        for j in range(i, n):
+            A[i][j] *= inv
+        x[i] *= inv
+
+        for r in range(n):
+            if r == i:
+                continue
+            factor = A[r][i]
+            if factor == 0:
+                continue
+            for j in range(i, n):
+                A[r][j] -= factor * A[i][j]
+            x[r] -= factor * x[i]
+
+    return x
+
+
+def fit_polynomial_features(number: int, degree: int) -> List[float]:
+    """Fit a polynomial to the digits of ``number`` and return residuals."""
+    digits = [int(d) for d in str(number)]
+    if not digits:
+        return []
+    x_vals = list(range(len(digits)))
+    n = degree + 1
+    # Build design matrix
+    X = [[x ** p for p in range(n)] for x in x_vals]
+    XtX = [[0.0] * n for _ in range(n)]
+    Xty = [0.0] * n
+    for i, row in enumerate(X):
+        for j in range(n):
+            Xty[j] += row[j] * digits[i]
+            for k in range(n):
+                XtX[j][k] += row[j] * row[k]
+
+    coeffs = _solve_linear_system(XtX, Xty)
+
+    # Evaluate polynomial and compute residuals
+    residuals = []
+    for x in x_vals:
+        fitted = 0.0
+        power = 1.0
+        for c in coeffs:
+            fitted += c * power
+            power *= x
+        residuals.append(digits[x] - fitted)
+
+    return residuals
+
+
 def generate_mathematical_features(
     number: int,
     previous_numbers: List[int] | None = None,
     window_size: int = 5,
     digit_tensor: bool = False,
+    reference_set: Set[int] | None = None,
+    poly_degree: int | None = None,
 ) -> dict:
     """Generate comprehensive mathematical features for a number.
 
@@ -135,6 +220,9 @@ def generate_mathematical_features(
             computed using this history.
         window_size: Window length for mean/std statistics of ``previous_numbers``.
         digit_tensor: If True, include an array representation of the digits.
+        reference_set: Optional set of integers for next/previous distance features.
+        poly_degree: If provided, fit a polynomial of this degree to the digits
+            and return residuals.
     """
 
     if previous_numbers is None:
@@ -209,6 +297,13 @@ def generate_mathematical_features(
         features["ratio_n"] = 0.0
         features[f"mean_last_{window_size}"] = 0.0
         features[f"std_last_{window_size}"] = 0.0
+
+    if reference_set is not None:
+        features["dist_to_next"] = distance_to_next(number, reference_set)
+        features["dist_to_prev"] = distance_to_prev(number, reference_set)
+
+    if poly_degree is not None:
+        features[f"poly_deg_{poly_degree}_residuals"] = fit_polynomial_features(number, poly_degree)
 
     if digit_tensor:
         features["digit_tensor"] = np.array([int(d) for d in str(number)], dtype=int)
