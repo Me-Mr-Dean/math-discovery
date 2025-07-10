@@ -200,6 +200,206 @@ def generate_rule_datasets(rule_number, max_number, processors):
 
 
 def interactive_rule_creator():
+    """Enhanced interactive mode to create custom rules with size controls"""
+    print("\n🛠️  ENHANCED INTERACTIVE RULE CREATOR")
+    print("=" * 50)
+    print("Create a custom mathematical rule and specify dataset sizes.")
+    print("Your function should take an integer n and return True/False.")
+    print()
+
+    print("Examples:")
+    print("  lambda n: n % 3 == 0                    # Multiples of 3")
+    print("  lambda n: str(n) == str(n)[::-1]        # Palindromes")
+    print("  lambda n: sum(int(d)**2 for d in str(n)) == n  # Happy numbers")
+    print("  lambda n: len(str(n)) == sum(int(d) for d in str(n))  # Special property")
+    print()
+
+    try:
+        # Step 1: Get function code
+        func_code = input("Enter your function (lambda n: ...): ").strip()
+        if not func_code.startswith("lambda"):
+            func_code = "lambda n: " + func_code
+
+        # Test the function
+        print("\n🧪 Testing your function...")
+        func = eval(func_code)
+
+        # Test on small numbers to verify it works
+        test_results = []
+        for i in range(1, 51):  # Test 1-50
+            try:
+                result = func(i)
+                if result:
+                    test_results.append(i)
+            except:
+                pass
+
+        print(
+            f"Test results (1-50): {test_results[:15]}{'...' if len(test_results) > 15 else ''}"
+        )
+        print(f"Found {len(test_results)} matching numbers in range 1-50")
+
+        if not test_results:
+            print("⚠️  No matches found in 1-50. Rule might be too restrictive.")
+            print("Consider testing a broader range or adjusting your rule.")
+            return None
+
+        # Step 2: Get rule metadata
+        print("\n📝 Rule Information:")
+        name = input("Rule name: ").strip()
+        description = input("Description: ").strip()
+
+        # Step 3: Size configuration
+        print("\n📊 Dataset Size Configuration:")
+        print("You can specify different sizes for generation and processing.")
+        print()
+
+        # Raw dataset size
+        print("🔢 Raw Dataset Generation:")
+        print("  This determines how many numbers to test to find matches.")
+        print("  Larger ranges find more examples but take longer.")
+        print("  Recommended: 10,000 - 1,000,000")
+
+        while True:
+            try:
+                max_number = input("Maximum number to test (default: 50,000): ").strip()
+                if not max_number:
+                    max_number = 50000
+                else:
+                    max_number = int(max_number)
+
+                if max_number < 100:
+                    print("⚠️  Too small. Minimum recommended: 100")
+                    continue
+                elif max_number > 10000000:
+                    print(
+                        "⚠️  Very large. This might take a long time. Continue? (y/N): ",
+                        end="",
+                    )
+                    if input().strip().lower() != "y":
+                        continue
+                break
+            except ValueError:
+                print("❌ Please enter a valid number")
+
+        # ML processing scope
+        print(f"\n🤖 ML Dataset Processing:")
+        print("  This determines the scope for generating ML features.")
+        print("  You can process fewer numbers than you tested for speed.")
+        print("  This affects the final ML dataset size, not the raw findings.")
+
+        while True:
+            try:
+                ml_max_str = input(
+                    f"ML processing scope (default: {min(max_number, 10000)}): "
+                ).strip()
+                if not ml_max_str:
+                    ml_max_number = min(max_number, 10000)
+                else:
+                    ml_max_number = int(ml_max_str)
+
+                if ml_max_number > max_number:
+                    print(
+                        f"⚠️  ML scope cannot exceed raw generation scope ({max_number})"
+                    )
+                    continue
+                elif ml_max_number < 100:
+                    print("⚠️  Too small for meaningful ML. Minimum recommended: 100")
+                    continue
+                break
+            except ValueError:
+                print("❌ Please enter a valid number")
+
+        # Processor selection
+        print(f"\n⚙️  Processor Selection:")
+        print("  Choose which ML representations to generate:")
+
+        available_processors = {
+            "1": ("prefix_suffix_2_1", "Prefix-Suffix Matrix (2-1 digits)"),
+            "2": ("prefix_suffix_3_2", "Prefix-Suffix Matrix (3-2 digits)"),
+            "3": ("digit_tensor", "Digit Tensor with embeddings"),
+            "4": ("digit_tensor_simple", "Simple Digit Tensor"),
+            "5": ("sequence_patterns", "Sequence Pattern Analysis"),
+            "6": ("sequence_patterns_wide", "Wide Sequence Patterns"),
+            "7": ("algebraic_features", "Comprehensive Algebraic Features"),
+            "a": ("all", "All processors (recommended)"),
+        }
+
+        for key, (proc_name, description) in available_processors.items():
+            print(f"  {key}. {description}")
+
+        print()
+        processor_input = (
+            input("Select processors (comma-separated, or 'a' for all): ")
+            .strip()
+            .lower()
+        )
+
+        if processor_input == "a" or processor_input == "all":
+            selected_processors = None  # None means all
+            processor_names = "All processors"
+        else:
+            selected_keys = [k.strip() for k in processor_input.split(",")]
+            selected_processors = []
+            processor_descriptions = []
+
+            for key in selected_keys:
+                if key in available_processors and key != "a":
+                    proc_name, description = available_processors[key]
+                    selected_processors.append(proc_name)
+                    processor_descriptions.append(description)
+
+            if not selected_processors:
+                print("⚠️  No valid processors selected. Using all processors.")
+                selected_processors = None
+                processor_names = "All processors"
+            else:
+                processor_names = ", ".join(processor_descriptions)
+
+        # Confirmation
+        print(f"\n📋 CONFIGURATION SUMMARY:")
+        print("=" * 40)
+        print(f"Rule Name: {name}")
+        print(f"Description: {description}")
+        print(f"Function: {func_code}")
+        print(f"Raw Generation Scope: 1 to {max_number:,}")
+        print(f"ML Processing Scope: 1 to {ml_max_number:,}")
+        print(f"Processors: {processor_names}")
+        print()
+
+        # Estimate time and size
+        estimated_raw_time = max_number / 100000  # Rough estimate
+        estimated_ml_time = ml_max_number / 10000  # Rough estimate
+
+        print(f"⏱️  Estimated time:")
+        print(f"  Raw generation: ~{estimated_raw_time:.1f} seconds")
+        print(f"  ML processing: ~{estimated_ml_time:.1f} seconds")
+        print()
+
+        confirm = input("Proceed with generation? (Y/n): ").strip().lower()
+        if confirm == "n":
+            print("❌ Generation cancelled.")
+            return None
+
+        # Create rule with the specified configuration
+        rule = MathematicalRule(
+            func=func, name=name, description=description, examples=test_results[:10]
+        )
+
+        # Return rule and configuration
+        return {
+            "rule": rule,
+            "max_number": max_number,
+            "ml_max_number": ml_max_number,
+            "processors": selected_processors,
+        }
+
+    except KeyboardInterrupt:
+        print("\n❌ Cancelled by user.")
+        return None
+    except Exception as e:
+        print(f"❌ Error creating rule: {e}")
+        return None
     """Interactive mode to create custom rules"""
     print("\n🛠️  INTERACTIVE RULE CREATOR")
     print("=" * 40)
