@@ -24,6 +24,7 @@ import json
 import warnings
 from typing import Callable, List, Dict, Any, Tuple, Optional
 from abc import ABC, abstractmethod
+import argparse
 
 warnings.filterwarnings("ignore")
 
@@ -587,84 +588,496 @@ def create_example_rules() -> List[MathematicalRule]:
     return rules
 
 
-def main():
-    """Example usage and testing"""
-    import sys
+def create_custom_rules():
+    """Create additional custom mathematical rules for the CLI"""
 
-    if len(sys.argv) < 2:
-        print("Universal Mathematical Dataset Generator")
-        print("=" * 50)
-        print("Usage: python universal_dataset_generator.py <command> [options]")
+    rules = []
+
+    # Primes (simple trial division)
+    def is_prime(n):
+        if n < 2:
+            return False
+        if n == 2:
+            return True
+        if n % 2 == 0:
+            return False
+        for i in range(3, int(n**0.5) + 1, 2):
+            if n % i == 0:
+                return False
+        return True
+
+    rules.append(
+        MathematicalRule(
+            func=is_prime,
+            name="Prime Numbers",
+            description="Numbers with exactly two positive divisors",
+            examples=[2, 3, 5, 7, 11, 13, 17, 19, 23, 29],
+        )
+    )
+
+    # Narcissistic numbers
+    def is_narcissistic(n):
+        digits = [int(d) for d in str(n)]
+        power = len(digits)
+        return n == sum(d**power for d in digits)
+
+    rules.append(
+        MathematicalRule(
+            func=is_narcissistic,
+            name="Narcissistic Numbers",
+            description="Numbers equal to sum of digits raised to power of digit count",
+            examples=[1, 2, 3, 4, 5, 6, 7, 8, 9, 153, 371, 407],
+        )
+    )
+
+    return rules
+
+
+def list_all_rules():
+    """List all available mathematical rules"""
+    print("📋 AVAILABLE MATHEMATICAL RULES")
+    print("=" * 50)
+
+    # Get built-in rules
+    builtin_rules = create_example_rules()
+    custom_rules = create_custom_rules()
+
+    all_rules = builtin_rules + custom_rules
+
+    print(f"\n🏗️  Built-in Rules ({len(builtin_rules)}):")
+    for i, rule in enumerate(builtin_rules, 1):
+        print(f"  {i:2d}. {rule.name}")
+        print(f"      {rule.description}")
+        print(f"      Examples: {rule.examples[:8]}...")
         print()
-        print("Commands:")
-        print("  demo              - Run demo with example rules")
-        print("  list              - List available mathematical rules")
-        print("  generate <rule>   - Generate datasets for specific rule")
+
+    print(f"🎯 Additional Rules ({len(custom_rules)}):")
+    start_idx = len(builtin_rules) + 1
+    for i, rule in enumerate(custom_rules, start_idx):
+        print(f"  {i:2d}. {rule.name}")
+        print(f"      {rule.description}")
+        print(f"      Examples: {rule.examples[:8]}...")
         print()
-        print("Options:")
-        print("  --max-number N    - Maximum number to test (default: 10000)")
-        print("  --processors P    - Comma-separated list of processors")
+
+    print(f"Total: {len(all_rules)} mathematical rules available")
+    return all_rules
+
+
+def interactive_rule_creator():
+    """Enhanced interactive mode to create custom rules with size controls"""
+    print("\n🛠️  ENHANCED INTERACTIVE RULE CREATOR")
+    print("=" * 50)
+    print("Create a custom mathematical rule and specify dataset sizes.")
+    print("Your function should take an integer n and return True/False.")
+    print()
+
+    print("Examples:")
+    print("  lambda n: n % 3 == 0                    # Multiples of 3")
+    print("  lambda n: str(n) == str(n)[::-1]        # Palindromes")
+    print("  lambda n: sum(int(d)**2 for d in str(n)) == n  # Happy numbers")
+    print("  lambda n: len(str(n)) == sum(int(d) for d in str(n))  # Special property")
+    print()
+
+    try:
+        # Step 1: Get function code
+        func_code = input("Enter your function (lambda n: ...): ").strip()
+        if not func_code.startswith("lambda"):
+            func_code = "lambda n: " + func_code
+
+        # Test the function
+        print("\n🧪 Testing your function...")
+        func = eval(func_code)
+
+        # Test on small numbers to verify it works
+        test_results = []
+        for i in range(1, 51):  # Test 1-50
+            try:
+                result = func(i)
+                if result:
+                    test_results.append(i)
+            except:
+                pass
+
+        print(
+            f"Test results (1-50): {test_results[:15]}{'...' if len(test_results) > 15 else ''}"
+        )
+        print(f"Found {len(test_results)} matching numbers in range 1-50")
+
+        if not test_results:
+            print("⚠️  No matches found in 1-50. Rule might be too restrictive.")
+            print("Consider testing a broader range or adjusting your rule.")
+            return None
+
+        # Step 2: Get rule metadata
+        print("\n📝 Rule Information:")
+        name = input("Rule name: ").strip()
+        description = input("Description: ").strip()
+
+        # Step 3: Size configuration
+        print("\n📊 Dataset Size Configuration:")
+        print("You can specify different sizes for generation and processing.")
         print()
-        print("Example:")
-        print("  python universal_dataset_generator.py demo --max-number 50000")
-        return
 
-    command = sys.argv[1].lower()
+        # Raw dataset size
+        print("🔢 Raw Dataset Generation:")
+        print("  This determines how many numbers to test to find matches.")
+        print("  Larger ranges find more examples but take longer.")
+        print("  Recommended: 10,000 - 1,000,000")
 
-    # Parse options
-    max_number = 10000
-    processors = None
+        while True:
+            try:
+                max_number = input("Maximum number to test (default: 50,000): ").strip()
+                if not max_number:
+                    max_number = 50000
+                else:
+                    max_number = int(max_number)
 
-    for i, arg in enumerate(sys.argv):
-        if arg == "--max-number" and i + 1 < len(sys.argv):
-            max_number = int(sys.argv[i + 1])
-        elif arg == "--processors" and i + 1 < len(sys.argv):
-            processors = sys.argv[i + 1].split(",")
+                if max_number < 100:
+                    print("⚠️  Too small. Minimum recommended: 100")
+                    continue
+                elif max_number > 10000000:
+                    print(
+                        "⚠️  Very large. This might take a long time. Continue? (y/N): ",
+                        end="",
+                    )
+                    if input().strip().lower() != "y":
+                        continue
+                break
+            except ValueError:
+                print("❌ Please enter a valid number")
 
-    # Initialize generator
-    generator = UniversalDatasetGenerator()
+        # ML processing scope
+        print(f"\n🤖 ML Dataset Processing:")
+        print("  This determines the scope for generating ML features.")
+        print("  You can process fewer numbers than you tested for speed.")
+        print("  This affects the final ML dataset size, not the raw findings.")
 
-    if command == "demo":
-        print("🎯 Running demo with Perfect Squares...")
-        rules = create_example_rules()
-        rule = rules[0]  # Perfect squares
+        while True:
+            try:
+                ml_max_str = input(
+                    f"ML processing scope (default: {min(max_number, 10000)}): "
+                ).strip()
+                if not ml_max_str:
+                    ml_max_number = min(max_number, 10000)
+                else:
+                    ml_max_number = int(ml_max_str)
 
-        summary = generator.generate_complete_pipeline(
-            rule=rule, max_number=max_number, processors=processors
+                if ml_max_number > max_number:
+                    print(
+                        f"⚠️  ML scope cannot exceed raw generation scope ({max_number})"
+                    )
+                    continue
+                elif ml_max_number < 100:
+                    print("⚠️  Too small for meaningful ML. Minimum recommended: 100")
+                    continue
+                break
+            except ValueError:
+                print("❌ Please enter a valid number")
+
+        # Processor selection
+        print(f"\n⚙️  Processor Selection:")
+        print("  Choose which ML representations to generate:")
+
+        available_processors = {
+            "1": ("prefix_suffix_2_1", "Prefix-Suffix Matrix (2-1 digits)"),
+            "2": ("prefix_suffix_3_2", "Prefix-Suffix Matrix (3-2 digits)"),
+            "3": ("digit_tensor", "Digit Tensor with embeddings"),
+            "4": ("digit_tensor_simple", "Simple Digit Tensor"),
+            "5": ("sequence_patterns", "Sequence Pattern Analysis"),
+            "6": ("sequence_patterns_wide", "Wide Sequence Patterns"),
+            "7": ("algebraic_features", "Comprehensive Algebraic Features"),
+            "a": ("all", "All processors (recommended)"),
+        }
+
+        for key, (proc_name, description) in available_processors.items():
+            print(f"  {key}. {description}")
+
+        print()
+        processor_input = (
+            input("Select processors (comma-separated, or 'a' for all): ")
+            .strip()
+            .lower()
         )
 
-        print(f"\n📊 Demo Summary:")
-        print(f"  Generated {summary['total_datasets']} ML datasets")
-        print(f"  Processors used: {', '.join(summary['processors_used'])}")
+        if processor_input == "a" or processor_input == "all":
+            selected_processors = None  # None means all
+            processor_names = "All processors"
+        else:
+            selected_keys = [k.strip() for k in processor_input.split(",")]
+            selected_processors = []
+            processor_descriptions = []
 
-    elif command == "list":
-        print("📋 Available Mathematical Rules:")
+            for key in selected_keys:
+                if key in available_processors and key != "a":
+                    proc_name, description = available_processors[key]
+                    selected_processors.append(proc_name)
+                    processor_descriptions.append(description)
+
+            if not selected_processors:
+                print("⚠️  No valid processors selected. Using all processors.")
+                selected_processors = None
+                processor_names = "All processors"
+            else:
+                processor_names = ", ".join(processor_descriptions)
+
+        # Confirmation
+        print(f"\n📋 CONFIGURATION SUMMARY:")
         print("=" * 40)
-        rules = create_example_rules()
-        for i, rule in enumerate(rules, 1):
-            print(f"{i}. {rule.name}")
-            print(f"   {rule.description}")
-            print(f"   Examples: {rule.examples[:5]}...")
-            print()
+        print(f"Rule Name: {name}")
+        print(f"Description: {description}")
+        print(f"Function: {func_code}")
+        print(f"Raw Generation Scope: 1 to {max_number:,}")
+        print(f"ML Processing Scope: 1 to {ml_max_number:,}")
+        print(f"Processors: {processor_names}")
+        print()
 
-    elif command == "generate":
-        if len(sys.argv) < 3:
-            print("Please specify a rule number (use 'list' command to see options)")
+        # Estimate time and size
+        estimated_raw_time = max_number / 100000  # Rough estimate
+        estimated_ml_time = ml_max_number / 10000  # Rough estimate
+
+        print(f"⏱️  Estimated time:")
+        print(f"  Raw generation: ~{estimated_raw_time:.1f} seconds")
+        print(f"  ML processing: ~{estimated_ml_time:.1f} seconds")
+        print()
+
+        confirm = input("Proceed with generation? (Y/n): ").strip().lower()
+        if confirm == "n":
+            print("❌ Generation cancelled.")
+            return None
+
+        # Create rule with the specified configuration
+        rule = MathematicalRule(
+            func=func, name=name, description=description, examples=test_results[:10]
+        )
+
+        # Return rule and configuration
+        return {
+            "rule": rule,
+            "max_number": max_number,
+            "ml_max_number": ml_max_number,
+            "processors": selected_processors,
+        }
+
+    except KeyboardInterrupt:
+        print("\n❌ Cancelled by user.")
+        return None
+    except Exception as e:
+        print(f"❌ Error creating rule: {e}")
+        return None
+
+
+def enhanced_generation_pipeline(rule_config):
+    """Enhanced pipeline that handles different sizes for raw and ML generation"""
+    rule = rule_config["rule"]
+    max_number = rule_config["max_number"]
+    ml_max_number = rule_config["ml_max_number"]
+    processors = rule_config["processors"]
+
+    print(f"\n🚀 ENHANCED GENERATION PIPELINE")
+    print("=" * 50)
+    print(f"Rule: {rule.name}")
+    print(f"Raw generation: 1 to {max_number:,}")
+    print(f"ML processing: 1 to {ml_max_number:,}")
+
+    generator = UniversalDatasetGenerator()
+
+    # Step 1: Generate raw dataset
+    print(f"\n🔢 Step 1: Raw Dataset Generation")
+    numbers, metadata = generator.generate_raw_dataset(rule, max_number)
+
+    found_count = len(numbers)
+    density = found_count / max_number
+
+    print(f"✅ Found {found_count:,} matching numbers")
+    print(f"📊 Density: {density:.4f} ({density*100:.2f}%)")
+
+    if found_count == 0:
+        print("❌ No matching numbers found. Try a different rule or larger range.")
+        return None
+
+    # Step 2: Adjust for ML processing scope
+    if ml_max_number < max_number:
+        print(f"\n🎯 Step 2: Adjusting for ML Processing Scope")
+
+        # Filter numbers to only those within ML scope
+        ml_numbers = [n for n in numbers if n <= ml_max_number]
+        ml_found_count = len(ml_numbers)
+        ml_density = ml_found_count / ml_max_number if ml_max_number > 0 else 0
+
+        print(f"📊 Numbers in ML scope: {ml_found_count:,} out of {found_count:,}")
+        print(f"📊 ML scope density: {ml_density:.4f} ({ml_density*100:.2f}%)")
+
+        if ml_found_count == 0:
+            print("⚠️  No numbers found in ML processing scope.")
+            print("Consider increasing ML scope or adjusting the rule.")
+            return None
+
+        # Create adjusted metadata for ML processing
+        ml_metadata = metadata.copy()
+        ml_metadata["max_number"] = ml_max_number
+        ml_metadata["total_found"] = ml_found_count
+        ml_metadata["density"] = ml_density
+        ml_metadata["original_max_number"] = max_number
+        ml_metadata["original_total_found"] = found_count
+
+        processing_numbers = ml_numbers
+        processing_metadata = ml_metadata
+    else:
+        processing_numbers = numbers
+        processing_metadata = metadata
+
+    # Step 3: Generate ML datasets
+    print(f"\n🤖 Step 3: ML Dataset Generation")
+    ml_datasets = generator.process_to_ml_datasets(
+        processing_numbers, processing_metadata, processors
+    )
+
+    # Step 4: Results summary
+    print(f"\n📊 GENERATION COMPLETE!")
+    print("=" * 40)
+    print(f"✅ Raw dataset: {found_count:,} numbers found (testing 1-{max_number:,})")
+    print(
+        f"✅ ML datasets: {len(ml_datasets)} formats generated (scope 1-{ml_max_number:,})"
+    )
+    print(f"📁 Location: data/output/{rule.safe_name}/")
+
+    # Show what was created
+    output_dir = Path("data/output") / rule.safe_name
+    if output_dir.exists():
+        files = list(output_dir.glob("*.csv"))
+        print(f"\n📂 Generated Files:")
+        for file in files:
+            size_mb = file.stat().st_size / (1024 * 1024)
+            print(f"  📄 {file.name} ({size_mb:.2f} MB)")
+
+    return {
+        "rule": rule,
+        "raw_numbers": numbers,
+        "ml_datasets": ml_datasets,
+        "raw_metadata": metadata,
+        "ml_metadata": processing_metadata,
+        "processors_used": list(ml_datasets.keys()),
+        "total_datasets": len(ml_datasets),
+    }
+
+
+def generate_rule_datasets_enhanced(rule_number, max_number, ml_max_number, processors):
+    """Enhanced rule generation with separate raw and ML scopes"""
+
+    # Get all rules
+    builtin_rules = create_example_rules()
+    custom_rules = create_custom_rules()
+    all_rules = builtin_rules + custom_rules
+
+    if rule_number < 1 or rule_number > len(all_rules):
+        print(f"❌ Invalid rule number. Use 1-{len(all_rules)}")
+        return False
+
+    rule = all_rules[rule_number - 1]
+
+    # Create config
+    rule_config = {
+        "rule": rule,
+        "max_number": max_number,
+        "ml_max_number": ml_max_number,
+        "processors": processors,
+    }
+
+    # Run enhanced pipeline
+    summary = enhanced_generation_pipeline(rule_config)
+
+    if summary:
+        print(f"\n✅ Successfully generated {summary['total_datasets']} datasets!")
+        print(f"📁 Location: data/output/{rule.safe_name}/")
+        return True
+    else:
+        return False
+
+
+def main():
+    """Main CLI interface with enhanced interactive mode"""
+    parser = argparse.ArgumentParser(
+        description="Generate ML-ready datasets from mathematical rules",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s list                           # List all available rules
+  %(prog)s generate 1 --max 10000        # Generate perfect squares up to 10,000
+  %(prog)s generate 5 --processors prefix_suffix_2_1,digit_tensor
+  %(prog)s interactive                    # Enhanced interactive rule creation
+  %(prog)s demo                          # Quick demo with perfect squares
+        """,
+    )
+
+    parser.add_argument(
+        "command",
+        choices=["list", "generate", "interactive", "demo"],
+        help="Command to execute",
+    )
+    parser.add_argument(
+        "rule_number",
+        nargs="?",
+        type=int,
+        help='Rule number to generate (use "list" to see options)',
+    )
+    parser.add_argument(
+        "--max",
+        "--max-number",
+        type=int,
+        default=10000,
+        help="Maximum number to test (default: 10000)",
+    )
+    parser.add_argument(
+        "--ml-max",
+        "--ml-max-number",
+        type=int,
+        help="Maximum number for ML processing (default: same as --max)",
+    )
+    parser.add_argument(
+        "--processors", type=str, help="Comma-separated list of processors to use"
+    )
+
+    args = parser.parse_args()
+
+    # Parse processors
+    processors = None
+    if args.processors:
+        processors = [p.strip() for p in args.processors.split(",")]
+
+    print("🧮 UNIVERSAL DATASET GENERATOR")
+    print("=" * 50)
+
+    if args.command == "list":
+        list_all_rules()
+
+    elif args.command == "generate":
+        if args.rule_number is None:
+            print("❌ Please specify a rule number (use 'list' command to see options)")
+            parser.print_help()
             return
 
-        rule_num = int(sys.argv[2]) - 1
-        rules = create_example_rules()
+        ml_max = args.ml_max if args.ml_max else args.max
+        success = generate_rule_datasets_enhanced(
+            args.rule_number, args.max, ml_max, processors
+        )
+        if not success:
+            sys.exit(1)
 
-        if 0 <= rule_num < len(rules):
-            rule = rules[rule_num]
-            summary = generator.generate_complete_pipeline(
-                rule=rule, max_number=max_number, processors=processors
-            )
-        else:
-            print(f"Invalid rule number. Use 1-{len(rules)}")
+    elif args.command == "interactive":
+        rule_config = interactive_rule_creator()
+        if rule_config:
+            summary = enhanced_generation_pipeline(rule_config)
+            if summary:
+                print(
+                    f"✅ Successfully generated {summary['total_datasets']} ML datasets!"
+                )
 
-    else:
-        print(f"Unknown command: {command}")
+    elif args.command == "demo":
+        print("🎯 Running quick demo with Perfect Squares...")
+        ml_max = min(args.max, 5000)
+        success = generate_rule_datasets_enhanced(1, args.max, ml_max, processors)
+        if success:
+            print("\n🎉 Demo complete! Check data/output/perfect_squares/ for results.")
 
 
 if __name__ == "__main__":
