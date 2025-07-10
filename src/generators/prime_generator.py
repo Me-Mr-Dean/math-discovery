@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Prime CSV Generator - Multiple Dataset Formats
+Provides utilities to build prefix-suffix matrices from arbitrary number sets.
 Reads 1m.csv containing prime numbers and generates four different CSV formats
 based on different mathematical insights about prime number patterns.
 """
@@ -17,6 +18,7 @@ import os
 import sys
 from pathlib import Path
 import time
+from src.utils.prefix_suffix_utils import generate_prefix_suffix_matrix
 
 
 class PrimeGenerator:
@@ -29,6 +31,7 @@ class PrimeGenerator:
         raise NotImplementedError
 
 class PrimeCSVGenerator:
+    """CSV utilities for prime data generation. Includes helpers for building prefix-suffix matrices."""
     def __init__(self, input_file="../../data/raw/1m.csv", output_dir="output"):
         """
         Initialize the Prime CSV Generator
@@ -300,6 +303,32 @@ class PrimeCSVGenerator:
         self.save_matrix_to_csv(
             df, filename, "Dataset 3 - Extended Prime-Friendly Endings"
         )
+        return df
+
+    def generate_prefix_suffix_dataset(
+        self,
+        prefix_digits: int,
+        suffix_digits: int,
+        numbers: list[int] | None = None,
+    ):
+        """Generate a prefix-suffix matrix using the loaded primes.
+
+        Parameters
+        ----------
+        prefix_digits:
+            Number of leading digits to treat as the prefix.
+        suffix_digits:
+            Number of trailing digits to use as the suffix.
+        numbers:
+            Optional explicit list of numbers to include. By default the
+            loaded prime set is used.
+        """
+
+        if numbers is None:
+            numbers = sorted(self.prime_set)
+
+        df = generate_prefix_suffix_matrix(numbers, prefix_digits, suffix_digits)
+
         return df
 
     def show_sample_data(self, df, title, max_rows=5):

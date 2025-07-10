@@ -52,6 +52,18 @@ OEIS sequence analysis and validation.
 
 Prime number generation and dataset creation.
 
+`PrimeCSVGenerator` exposes a helper `generate_prefix_suffix_dataset()` that
+wraps ``generate_prefix_suffix_matrix`` from ``src.utils``.  It allows building
+custom prefix-suffix matrices from any list of numbers.
+
+```python
+from src.generators.prime_generator import PrimeCSVGenerator
+
+gen = PrimeCSVGenerator()
+gen.load_primes()
+df = gen.generate_prefix_suffix_dataset(prefix_digits=2, suffix_digits=2)
+```
+
 ### sequence_generator
 
 General mathematical sequence generation.
