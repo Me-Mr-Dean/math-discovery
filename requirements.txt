@@ -1,3 +1,17 @@
+# Mathematical Pattern Discovery Engine - Dependencies
+# Core mathematical and ML libraries
 pandas>=1.3.0
 numpy>=1.20.0
+scikit-learn>=1.0.0
+matplotlib>=3.5.0
+
+# Additional utilities
+pyyaml>=6.0.0
 openpyxl>=3.0.0
+
+# Optional but recommended
+seaborn>=0.11.0
+
+# For packaging and CLI
+setuptools>=45.0.0
+wheel>=0.36.0

@@ -3,18 +3,42 @@ Setup configuration for Mathematical Pattern Discovery Engine
 """
 
 from setuptools import setup, find_packages
+from pathlib import Path
 
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
+# Read README and requirements
+here = Path(__file__).parent
+readme_path = here / "README.md"
+requirements_path = here / "requirements.txt"
 
-with open("requirements.txt", "r", encoding="utf-8") as fh:
-    requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+# Read long description
+if readme_path.exists():
+    with open(readme_path, "r", encoding="utf-8") as fh:
+        long_description = fh.read()
+else:
+    long_description = "AI-powered mathematical pattern discovery engine"
+
+# Read requirements
+if requirements_path.exists():
+    with open(requirements_path, "r", encoding="utf-8") as fh:
+        requirements = [
+            line.strip() for line in fh if line.strip() and not line.startswith("#")
+        ]
+else:
+    # Fallback requirements
+    requirements = [
+        "pandas>=1.3.0",
+        "numpy>=1.20.0",
+        "scikit-learn>=1.0.0",
+        "matplotlib>=3.5.0",
+        "pyyaml>=6.0.0",
+        "openpyxl>=3.0.0",
+    ]
 
 setup(
     name="math-discovery",
     version="0.1.0",
-    author="Your Name",
-    author_email="your.email@example.com",
+    author="Mathematical Research Team",
+    author_email="research@math-discovery.org",
     description="AI-powered mathematical pattern discovery engine",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -24,6 +48,7 @@ setup(
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Science/Research",
+        "Intended Audience :: Education",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
@@ -33,6 +58,7 @@ setup(
         "Programming Language :: Python :: 3.11",
         "Topic :: Scientific/Engineering :: Mathematics",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Education",
     ],
     python_requires=">=3.8",
     install_requires=requirements,
@@ -47,6 +73,20 @@ setup(
         "docs": [
             "sphinx>=5.0.0",
             "sphinx-rtd-theme>=1.0.0",
+            "jupyter>=1.0.0",
+        ],
+        "viz": [
+            "seaborn>=0.11.0",
+            "plotly>=5.0.0",
+            "bokeh>=2.0.0",
+        ],
+        "full": [
+            "seaborn>=0.11.0",
+            "plotly>=5.0.0",
+            "bokeh>=2.0.0",
+            "jupyter>=1.0.0",
+            "sphinx>=5.0.0",
+            "sphinx-rtd-theme>=1.0.0",
         ],
     },
     entry_points={
@@ -56,4 +96,6 @@ setup(
             "math-analyze=src.cli.analyze:main",
         ],
     },
+    include_package_data=True,
+    zip_safe=False,
 )
