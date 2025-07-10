@@ -22,13 +22,33 @@ from src.utils.prefix_suffix_utils import generate_prefix_suffix_matrix
 
 
 class PrimeGenerator:
-    """Minimal stub used for unit tests."""
+    """Generate a list of prime numbers."""
 
-    def __init__(self):
-        pass
+    def generate_primes(self, n: int) -> list[int]:
+        """Return the first ``n`` prime numbers.
 
-    def generate_primes(self, n: int):
-        raise NotImplementedError
+        A simple incremental algorithm is used which is fast enough for the
+        small datasets produced by the command line tools.
+        """
+
+        if n <= 0:
+            return []
+
+        primes: list[int] = []
+        candidate = 2
+        while len(primes) < n:
+            is_prime = True
+            for p in primes:
+                if p * p > candidate:
+                    break
+                if candidate % p == 0:
+                    is_prime = False
+                    break
+            if is_prime:
+                primes.append(candidate)
+            candidate += 1
+
+        return primes
 
 class PrimeCSVGenerator:
     """CSV utilities for prime data generation. Includes helpers for building prefix-suffix matrices."""
