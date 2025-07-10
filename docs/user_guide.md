@@ -5,7 +5,8 @@
 ### Basic Usage
 
 ```python
-from math_discovery.core.discovery_engine import UniversalMathDiscovery
+# Import the engine from ``src`` once installed
+from src.core.discovery_engine import UniversalMathDiscovery
 
 # Create discovery engine
 engine = UniversalMathDiscovery(lambda n: n in [2, 3, 5, 7, 11, 13], "Primes")

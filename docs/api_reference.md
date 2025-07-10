@@ -2,6 +2,8 @@
 
 ## Core Modules
 
+All modules are imported from the ``src`` package once the library is installed.
+
 ### discovery_engine
 
 Main discovery engine for pattern analysis.
