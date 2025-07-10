@@ -4,7 +4,7 @@ Command-line interface for data generation
 """
 
 import argparse
-from ..generators from src.generators import prime_generator
+from src.generators import prime_generator
 
 def main():
     parser = argparse.ArgumentParser(description="Generate mathematical datasets")

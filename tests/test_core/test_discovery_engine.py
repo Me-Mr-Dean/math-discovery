@@ -8,13 +8,21 @@ from src.core import discovery_engine
 class TestDiscoveryEngine:
     def test_initialization(self):
         """Test engine initialization"""
-        engine = discovery_engine.DiscoveryEngine()
+        engine = discovery_engine.UniversalMathDiscovery(
+            discovery_engine.powers_of_2,
+            "Powers of 2",
+            max_number=10,
+        )
         assert engine is not None
     
     def test_discover_patterns_basic(self):
         """Test basic pattern discovery"""
-        engine = discovery_engine.DiscoveryEngine()
-        sequence = [2, 3, 5, 7, 11]  # First 5 primes
+        engine = discovery_engine.UniversalMathDiscovery(
+            discovery_engine.powers_of_2,
+            "Powers of 2",
+            max_number=10,
+        )
+        sequence = [2, 4, 8, 16]  # First few powers of 2
         
         # This will fail until we implement the actual engine
         # patterns = engine.discover_patterns(sequence)

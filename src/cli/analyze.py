@@ -4,7 +4,8 @@ Command-line interface for sequence analysis
 """
 
 import argparse
-from ..analyzers import oeis_analyzer
+from src.analyzers import oeis_analyzer
+from src.core.discovery_engine import UniversalMathDiscovery
 
 def main():
     parser = argparse.ArgumentParser(description="Analyze mathematical sequences")
@@ -14,13 +15,26 @@ def main():
     args = parser.parse_args()
     
     if args.oeis:
-        analyzer = oeis_analyzer.OEISAnalyzer()
-        sequence = analyzer.load_sequence(args.oeis, max_terms=args.max_terms)
-        results = analyzer.analyze_sequence(sequence)
-        
-        print(f"Analysis of {args.oeis}:")
-        print(f"- Terms analyzed: {len(sequence)}")
-        print(f"- Patterns found: {len(results.get('patterns', []))}")
+        if args.oeis.upper() == "A007694":
+            sequence = oeis_analyzer.generate_a007694_sequence(args.max_terms)
+        else:
+            print("Only A007694 analysis is supported in this demo.")
+            return
+
+        engine = UniversalMathDiscovery(
+            target_function=lambda n: n in sequence,
+            function_name=args.oeis.upper(),
+            max_number=max(sequence),
+        )
+
+        prediction_fn = engine.run_complete_discovery()
+
+        print(f"Analysis of {args.oeis} (first {len(sequence)} terms):")
+        for n in sequence[:10]:
+            result = prediction_fn(n)
+            print(
+                f"{n}: prediction={result['prediction']} (prob: {result['probability']:.3f})"
+            )
 
 if __name__ == "__main__":
     main()
