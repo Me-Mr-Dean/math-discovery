@@ -306,6 +306,7 @@ def generate_mathematical_features(
         features[f"poly_deg_{poly_degree}_residuals"] = fit_polynomial_features(number, poly_degree)
 
     if digit_tensor:
-        features["digit_tensor"] = np.array([int(d) for d in str(number)], dtype=int)
+        tensor = np.array([int(d) for d in str(number)], dtype=int)
+        features["digit_tensor"] = list(tensor)
 
     return features
