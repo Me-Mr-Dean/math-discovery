@@ -44,16 +44,6 @@ from ..utils.embedding_utils import fourier_transform, pca_transform
 warnings.filterwarnings("ignore")
 
 
-class DiscoveryEngine:
-    """Minimal placeholder to satisfy unit tests."""
-
-    def __init__(self):
-        pass
-
-    def discover_patterns(self, sequence):
-        raise NotImplementedError
-
-
 class UniversalMathDiscovery:
     def __init__(
         self,
