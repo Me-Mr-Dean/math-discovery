@@ -1,0 +1,154 @@
+{
+  "timestamp": "2025-07-14 22:54:06",
+  "config": {
+    "max_samples": 100000,
+    "embedding": "fourier",
+    "quick_mode": false,
+    "save_results": true,
+    "comparative_analysis": true
+  },
+  "datasets_analyzed": 2,
+  "total_time": 0.6441073417663574,
+  "results": [
+    {
+      "dataset_name": "algebraic_features_up_to_1000",
+      "dataset_type": "ml",
+      "shape": [
+        1000,
+        39
+      ],
+      "positive_rate": 0.031,
+      "feature_count": 38,
+      "model_performance": {
+        "logistic": {
+          "train_acc": 1.0,
+          "test_acc": 1.0,
+          "test_auc": 1.0
+        },
+        "random_forest": {
+          "train_acc": 1.0,
+          "test_acc": 1.0,
+          "test_auc": 1.0
+        },
+        "gradient_boost": {
+          "train_acc": 1.0,
+          "test_acc": 1.0,
+          "test_auc": 1.0
+        }
+      },
+      "top_features": [
+        {
+          "feature": "sqrt_fractional",
+          "importance": 0.5654012489965201
+        },
+        {
+          "feature": "diff_n",
+          "importance": 0.0506066957622002
+        },
+        {
+          "feature": "ratio_n",
+          "importance": 0.04712637079307728
+        },
+        {
+          "feature": "divisor_count",
+          "importance": 0.024499930581172665
+        },
+        {
+          "feature": "digit_sum",
+          "importance": 0.021315454320899006
+        },
+        {
+          "feature": "number",
+          "importance": 0.019234450798897632
+        },
+        {
+          "feature": "digit_square_sum",
+          "importance": 0.019150390543555166
+        },
+        {
+          "feature": "mean_last_5",
+          "importance": 0.01717860149117855
+        },
+        {
+          "feature": "totient_value",
+          "importance": 0.016323522911788176
+        },
+        {
+          "feature": "log_fractional",
+          "importance": 0.015305643696632867
+        }
+      ],
+      "analysis_time": 1752526446.1143925
+    },
+    {
+      "dataset_name": "digit_tensor_4d_up_to_1000",
+      "dataset_type": "ml",
+      "shape": [
+        1000,
+        16
+      ],
+      "positive_rate": 0.031,
+      "feature_count": 15,
+      "model_performance": {
+        "logistic": {
+          "train_acc": 0.96875,
+          "test_acc": 0.97,
+          "test_auc": 0.6563573883161512
+        },
+        "random_forest": {
+          "train_acc": 0.99,
+          "test_acc": 0.965,
+          "test_auc": 0.7809278350515464
+        },
+        "gradient_boost": {
+          "train_acc": 1.0,
+          "test_acc": 0.96,
+          "test_auc": 0.6572164948453608
+        }
+      },
+      "top_features": [
+        {
+          "feature": "number",
+          "importance": 0.18486142146441858
+        },
+        {
+          "feature": "digit_product",
+          "importance": 0.11316572982219943
+        },
+        {
+          "feature": "digit_sum",
+          "importance": 0.1093121552383922
+        },
+        {
+          "feature": "digit_variance",
+          "importance": 0.10217838184277382
+        },
+        {
+          "feature": "alternating_sum",
+          "importance": 0.09537984633669246
+        },
+        {
+          "feature": "digit_pos_1",
+          "importance": 0.06930178078405846
+        },
+        {
+          "feature": "last_digit",
+          "importance": 0.06313084855950475
+        },
+        {
+          "feature": "digit_pos_0",
+          "importance": 0.0624180998671072
+        },
+        {
+          "feature": "first_digit",
+          "importance": 0.05151276858382757
+        },
+        {
+          "feature": "digit_range",
+          "importance": 0.044456368536403855
+        }
+      ],
+      "analysis_time": 1752526446.470926
+    }
+  ]
+}
