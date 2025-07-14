@@ -34,7 +34,19 @@ try:
 except ImportError as e:
     print(f"❌ Import Error: {e}")
     print("Make sure you're running from the project root.")
-    sys.exit(1)
+    print("Try installing: pip install -e .")
+
+    # Try absolute imports as fallback
+    try:
+        sys.path.insert(0, str(project_root))
+        from src.core.discovery_engine import UniversalMathDiscovery
+        from src.utils.path_utils import find_data_file, get_data_directory
+        from src.analyzers.prime_analyzer import PurePrimeMLDiscovery
+
+        print("✅ Fallback imports successful")
+    except ImportError as e2:
+        print(f"❌ Fallback import also failed: {e2}")
+        sys.exit(1)
 
 
 class DatasetInfo:
@@ -97,8 +109,14 @@ class InteractiveDiscoveryEngine:
     """Interactive interface for mathematical pattern discovery"""
 
     def __init__(self):
-        self.data_dir = get_data_directory()
-        self.output_dir = self.data_dir.parent / "output"
+        try:
+            self.data_dir = get_data_directory()
+            self.output_dir = self.data_dir.parent / "output"
+        except:
+            # Fallback if path utils don't work
+            self.data_dir = Path("data/raw")
+            self.output_dir = Path("data/output")
+
         self.discovered_datasets = []
         self.results_history = []
 
@@ -139,6 +157,7 @@ class InteractiveDiscoveryEngine:
             print("❌ No datasets found!")
             print("\n💡 Generate datasets first:")
             print("   python src/generators/universal_generator.py interactive")
+            print("   python src/generators/universal_generator.py demo")
             print("   python src/generators/prime_generator.py ml 10000")
             return
 
@@ -504,6 +523,8 @@ class InteractiveDiscoveryEngine:
         self, df: pd.DataFrame, target_col: str, dataset: DatasetInfo, config: Dict
     ) -> Dict:
         """Analyze ML-ready datasets using the discovery engine"""
+        print("🤖 Running ML analysis...")
+
         # Extract features and targets
         feature_cols = [col for col in df.columns if col != target_col]
         X = df[feature_cols]
@@ -544,17 +565,72 @@ class InteractiveDiscoveryEngine:
             discoverer.y = y.values
             discoverer.feature_names = feature_cols
 
+            # Train models directly
+            from sklearn.model_selection import train_test_split
+            from sklearn.ensemble import (
+                RandomForestClassifier,
+                GradientBoostingClassifier,
+            )
+            from sklearn.linear_model import LogisticRegression
+            from sklearn.preprocessing import StandardScaler
+            from sklearn.metrics import roc_auc_score
+
+            # Split data
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.2, random_state=42, stratify=y
+            )
+
+            # Scale features
+            scaler = StandardScaler()
+            X_train_scaled = scaler.fit_transform(X_train)
+            X_test_scaled = scaler.transform(X_test)
+
             # Train models
-            models = discoverer.train_discovery_models()
+            models = {}
+            models_config = {
+                "logistic": LogisticRegression(random_state=42, max_iter=1000),
+                "random_forest": RandomForestClassifier(
+                    n_estimators=100, random_state=42, max_depth=10, n_jobs=-1
+                ),
+                "gradient_boost": GradientBoostingClassifier(
+                    n_estimators=50, random_state=42, max_depth=6
+                ),
+            }
 
-            # Analyze discoveries
-            feature_importance = discoverer.analyze_mathematical_discoveries()
+            print("🤖 Training models...")
+            for name, model in models_config.items():
+                if name == "logistic":
+                    model.fit(X_train_scaled, y_train)
+                    train_pred = model.predict(X_train_scaled)
+                    test_pred = model.predict(X_test_scaled)
+                    test_proba = model.predict_proba(X_test_scaled)[:, 1]
+                else:
+                    model.fit(X_train, y_train)
+                    train_pred = model.predict(X_train)
+                    test_pred = model.predict(X_test)
+                    test_proba = model.predict_proba(X_test)[:, 1]
 
-            # Extract rules if not in quick mode
-            if not config.get("quick_mode", False):
-                rule_tree, rules = discoverer.extract_mathematical_rules()
+                train_acc = (train_pred == y_train).mean()
+                test_acc = (test_pred == y_test).mean()
+                test_auc = roc_auc_score(y_test, test_proba)
+
+                models[name] = {
+                    "model": model,
+                    "train_accuracy": train_acc,
+                    "test_accuracy": test_acc,
+                    "test_auc": test_auc,
+                }
+
+            # Analyze feature importance
+            best_model = models["random_forest"]["model"]
+            if hasattr(best_model, "feature_importances_"):
+                importances = best_model.feature_importances_
+                feature_importance = pd.DataFrame(
+                    {"feature": feature_cols, "importance": importances}
+                ).sort_values("importance", ascending=False)
+                top_features = feature_importance.head(10).to_dict("records")
             else:
-                rule_tree, rules = None, "Skipped in quick mode"
+                top_features = []
 
             result = {
                 "dataset_name": dataset.name,
@@ -570,14 +646,7 @@ class InteractiveDiscoveryEngine:
                     }
                     for name, info in models.items()
                 },
-                "top_features": (
-                    feature_importance.head(10).to_dict("records")
-                    if feature_importance is not None
-                    else []
-                ),
-                "rules_summary": (
-                    rules[:500] if isinstance(rules, str) else str(rules)[:500]
-                ),
+                "top_features": top_features,
                 "analysis_time": time.time(),
             }
 
@@ -616,6 +685,9 @@ class InteractiveDiscoveryEngine:
             # Step 1: Scan for datasets
             datasets = self.scan_for_datasets()
             if not datasets:
+                print("No datasets found. Generate some first!")
+                print("\n💡 Quick start:")
+                print("   python src/generators/universal_generator.py demo")
                 return
 
             # Step 2: Display available datasets
@@ -698,6 +770,9 @@ class InteractiveDiscoveryEngine:
             print("\n❌ Session interrupted by user")
         except Exception as e:
             print(f"\n💥 Session failed: {e}")
+            import traceback
+
+            traceback.print_exc()
 
 
 def main():

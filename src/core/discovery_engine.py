@@ -1,791 +1,542 @@
 #!/usr/bin/env python3
 """
-Interactive Mathematical Pattern Discovery Engine
-==============================================
+Universal Mathematical Discovery Engine
+=====================================
 
-Enhanced interactive interface for the discovery engine that integrates
-seamlessly with the Universal Dataset Generator outputs.
+A pure machine learning approach to discovering mathematical patterns.
+No hard-coded mathematical knowledge - pure pattern extraction from data.
 
-Features:
-- Auto-detect generated datasets
-- Interactive dataset selection
-- Folder-wide analysis capabilities
-- Progress tracking and results comparison
-- Integration with existing discovery engine
+This is the core discovery engine that all other components depend on.
 
 Author: Mathematical Pattern Discovery Team
 """
 
-import sys
 import pandas as pd
 import numpy as np
-from pathlib import Path
-import json
-import time
-from typing import List, Dict, Tuple, Optional
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier, export_text
+from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
+from sklearn.preprocessing import StandardScaler
 import warnings
+from typing import Callable, List, Dict, Any, Tuple, Optional
+from pathlib import Path
+import time
 
 warnings.filterwarnings("ignore")
 
-# Add project src to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root / "src"))
-
+# Try to import our utilities, with fallbacks
 try:
-    from utils.path_utils import find_data_file, get_data_directory
-    from analyzers.prime_analyzer import PurePrimeMLDiscovery
-    from analyzers.oeis_analyzer import a007694_property
-except ImportError as e:
-    print(f"❌ Import Error: {e}")
-    print("Make sure you're running from the project root.")
-    sys.exit(1)
-
-
-class DatasetInfo:
-    """Container for dataset information"""
-
-    def __init__(self, path: Path):
-        self.path = path
-        self.name = path.stem
-        self.rule_name = path.parent.name
-        self.size_mb = path.stat().st_size / (1024 * 1024)
-        self.metadata_path = (
-            path.parent / f"{path.stem.replace('.csv', '_metadata.json')}"
-        )
-        self.metadata = self._load_metadata()
-
-    def _load_metadata(self) -> Dict:
-        """Load metadata if available"""
-        if self.metadata_path.exists():
-            try:
-                with open(self.metadata_path, "r") as f:
-                    return json.load(f)
-            except:
-                pass
-        return {}
-
-    def get_shape(self) -> Tuple[int, int]:
-        """Get dataset shape efficiently"""
-        try:
-            df = pd.read_csv(self.path, nrows=0)  # Just read headers
-            total_rows = sum(1 for _ in open(self.path)) - 1  # Count lines minus header
-            return (total_rows, len(df.columns))
-        except:
-            return (0, 0)
-
-    def get_processor_type(self) -> str:
-        """Determine the processor type from filename"""
-        if "prefix" in self.name and "suffix" in self.name:
-            return "Prefix-Suffix Matrix"
-        elif "digit_tensor" in self.name:
-            return "Digit Tensor"
-        elif "sequence_patterns" in self.name:
-            return "Sequence Patterns"
-        elif "algebraic_features" in self.name:
-            return "Algebraic Features"
-        elif "ml_dataset" in self.name:
-            return "Legacy ML Dataset"
-        else:
-            return "Unknown"
-
-
-class InteractiveDiscoveryEngine:
-    """Interactive interface for mathematical pattern discovery"""
-
-    def __init__(self):
-        self.data_dir = get_data_directory()
-        self.output_dir = self.data_dir.parent / "output"
-        self.discovered_datasets = []
-        self.results_history = []
-
-    def scan_for_datasets(self) -> List[DatasetInfo]:
-        """Scan for available datasets from Universal Generator and legacy sources"""
-        print("🔍 Scanning for available datasets...")
-
-        datasets = []
-
-        # Scan Universal Generator outputs
-        if self.output_dir.exists():
-            for rule_dir in self.output_dir.iterdir():
-                if rule_dir.is_dir():
-                    for csv_file in rule_dir.glob("*.csv"):
-                        # Skip metadata files
-                        if "metadata" not in csv_file.name:
-                            datasets.append(DatasetInfo(csv_file))
-
-        # Scan legacy data directory
-        if self.data_dir.exists():
-            for csv_file in self.data_dir.glob("*.csv"):
-                # Skip if already found in output dir
-                if not any(d.path.name == csv_file.name for d in datasets):
-                    datasets.append(DatasetInfo(csv_file))
-
-        # Sort by rule name, then processor type
-        datasets.sort(key=lambda d: (d.rule_name, d.get_processor_type(), d.name))
-
-        self.discovered_datasets = datasets
-        return datasets
-
-    def display_available_datasets(self, datasets: List[DatasetInfo]) -> None:
-        """Display available datasets in a nice format"""
-        print(f"\n📊 DISCOVERED DATASETS ({len(datasets)} found)")
-        print("=" * 80)
-
-        if not datasets:
-            print("❌ No datasets found!")
-            print("\n💡 Generate datasets first:")
-            print("   python src/generators/universal_generator.py interactive")
-            print("   python src/generators/prime_generator.py ml 10000")
-            return
-
-        # Group by rule
-        by_rule = {}
-        for dataset in datasets:
-            rule = dataset.rule_name
-            if rule not in by_rule:
-                by_rule[rule] = []
-            by_rule[rule].append(dataset)
-
-        index = 1
-        for rule_name, rule_datasets in by_rule.items():
-            print(f"\n🎯 {rule_name.replace('_', ' ').title()}")
-            print("-" * 50)
-
-            for dataset in rule_datasets:
-                shape = dataset.get_shape()
-                processor_type = dataset.get_processor_type()
-
-                print(f"  {index:2d}. {processor_type}")
-                print(f"      📄 {dataset.name}")
-                print(
-                    f"      📊 Shape: {shape[0]:,} rows × {shape[1]} cols ({dataset.size_mb:.1f} MB)"
-                )
-
-                # Show metadata if available
-                if dataset.metadata:
-                    if "description" in dataset.metadata:
-                        print(f"      📝 {dataset.metadata['description']}")
-
-                print()
-                index += 1
-
-    def select_datasets(self, datasets: List[DatasetInfo]) -> List[DatasetInfo]:
-        """Interactive dataset selection"""
-        print("\n🎯 DATASET SELECTION")
-        print("=" * 30)
-        print("Choose how to proceed:")
-        print()
-        print("  1. Analyze single dataset")
-        print("  2. Analyze all datasets for one rule")
-        print("  3. Analyze all datasets (comprehensive)")
-        print("  4. Custom selection")
-        print("  5. Auto-select best datasets")
-        print()
-
-        try:
-            choice = input("Enter your choice (1-5): ").strip()
-
-            if choice == "1":
-                return self._select_single_dataset(datasets)
-            elif choice == "2":
-                return self._select_by_rule(datasets)
-            elif choice == "3":
-                print("⚠️  This will analyze ALL datasets. This may take a while.")
-                confirm = input("Continue? (y/N): ").strip().lower()
-                if confirm == "y":
-                    return datasets
-                else:
-                    return []
-            elif choice == "4":
-                return self._custom_selection(datasets)
-            elif choice == "5":
-                return self._auto_select_best(datasets)
-            else:
-                print("❌ Invalid choice")
-                return []
-
-        except KeyboardInterrupt:
-            print("\n❌ Selection cancelled")
-            return []
-        except Exception as e:
-            print(f"❌ Error in selection: {e}")
-            return []
-
-    def _select_single_dataset(self, datasets: List[DatasetInfo]) -> List[DatasetInfo]:
-        """Select a single dataset"""
-        print("\nEnter the dataset number: ", end="")
-        try:
-            num = int(input().strip())
-            if 1 <= num <= len(datasets):
-                selected = datasets[num - 1]
-                print(
-                    f"✅ Selected: {selected.rule_name} - {selected.get_processor_type()}"
-                )
-                return [selected]
-            else:
-                print("❌ Invalid dataset number")
-                return []
-        except ValueError:
-            print("❌ Please enter a valid number")
-            return []
-
-    def _select_by_rule(self, datasets: List[DatasetInfo]) -> List[DatasetInfo]:
-        """Select all datasets for one rule"""
-        # Get unique rules
-        rules = {}
-        for dataset in datasets:
-            rule = dataset.rule_name
-            if rule not in rules:
-                rules[rule] = []
-            rules[rule].append(dataset)
-
-        print("\nAvailable rules:")
-        rule_list = list(rules.keys())
-        for i, rule in enumerate(rule_list, 1):
-            count = len(rules[rule])
-            print(f"  {i}. {rule.replace('_', ' ').title()} ({count} datasets)")
-
-        print("\nEnter rule number: ", end="")
-        try:
-            num = int(input().strip())
-            if 1 <= num <= len(rule_list):
-                selected_rule = rule_list[num - 1]
-                selected_datasets = rules[selected_rule]
-                print(
-                    f"✅ Selected {len(selected_datasets)} datasets for: {selected_rule}"
-                )
-                return selected_datasets
-            else:
-                print("❌ Invalid rule number")
-                return []
-        except ValueError:
-            print("❌ Please enter a valid number")
-            return []
-
-    def _custom_selection(self, datasets: List[DatasetInfo]) -> List[DatasetInfo]:
-        """Custom dataset selection"""
-        print("\nEnter dataset numbers (comma-separated): ", end="")
-        try:
-            numbers = input().strip().split(",")
-            selected = []
-
-            for num_str in numbers:
-                num = int(num_str.strip())
-                if 1 <= num <= len(datasets):
-                    selected.append(datasets[num - 1])
-                else:
-                    print(f"⚠️  Skipping invalid number: {num}")
-
-            if selected:
-                print(f"✅ Selected {len(selected)} datasets")
-                for dataset in selected:
-                    print(f"   • {dataset.rule_name} - {dataset.get_processor_type()}")
-
-            return selected
-
-        except ValueError:
-            print("❌ Please enter valid numbers")
-            return []
-
-    def _auto_select_best(self, datasets: List[DatasetInfo]) -> List[DatasetInfo]:
-        """Auto-select best datasets for analysis"""
-        print("\n🤖 Auto-selecting best datasets...")
-
-        # Selection criteria:
-        # 1. Prefer algebraic_features (most comprehensive)
-        # 2. If no algebraic_features, prefer digit_tensor or sequence_patterns
-        # 3. Limit to reasonable size (< 100MB each)
-        # 4. Maximum 5 datasets to keep analysis manageable
-
-        selected = []
-
-        # Group by rule
-        by_rule = {}
-        for dataset in datasets:
-            rule = dataset.rule_name
-            if rule not in by_rule:
-                by_rule[rule] = []
-            by_rule[rule].append(dataset)
-
-        for rule_name, rule_datasets in by_rule.items():
-            # First try to find algebraic_features
-            best = None
-            for dataset in rule_datasets:
-                if dataset.size_mb > 100:  # Skip very large datasets
-                    continue
-
-                if "algebraic_features" in dataset.name:
-                    best = dataset
-                    break
-                elif (
-                    "digit_tensor" in dataset.name
-                    or "sequence_patterns" in dataset.name
-                ):
-                    if best is None:
-                        best = dataset
-
-            if best:
-                selected.append(best)
-
-            # Limit to 5 datasets total
-            if len(selected) >= 5:
-                break
-
-        if selected:
-            print(f"✅ Auto-selected {len(selected)} datasets:")
-            for dataset in selected:
-                print(f"   • {dataset.rule_name} - {dataset.get_processor_type()}")
-        else:
-            print("❌ No suitable datasets found for auto-selection")
-
-        return selected
-
-    def configure_analysis(self) -> Dict:
-        """Configure analysis parameters"""
-        print("\n⚙️  ANALYSIS CONFIGURATION")
-        print("=" * 30)
-
-        config = {
-            "max_samples": 50000,
-            "embedding": None,
-            "quick_mode": False,
-            "save_results": True,
-            "comparative_analysis": True,
-        }
-
-        print("Choose analysis mode:")
-        print("  1. Quick analysis (faster, smaller samples)")
-        print("  2. Standard analysis (balanced)")
-        print("  3. Deep analysis (slower, more thorough)")
-        print("  4. Custom configuration")
-        print()
-
-        try:
-            mode = input("Enter mode (1-4, default: 2): ").strip()
-            if not mode:
-                mode = "2"
-
-            if mode == "1":
-                config["max_samples"] = 10000
-                config["quick_mode"] = True
-                print("✅ Quick analysis mode selected")
-
-            elif mode == "3":
-                config["max_samples"] = 100000
-                config["embedding"] = "fourier"
-                print("✅ Deep analysis mode selected")
-
-            elif mode == "4":
-                print("\nCustom configuration:")
-
-                # Max samples
-                samples = input(
-                    f"Max samples (default: {config['max_samples']}): "
-                ).strip()
-                if samples:
-                    config["max_samples"] = int(samples)
-
-                # Embedding
-                embedding = input(
-                    "Use embeddings? (fourier/pca/none, default: none): "
-                ).strip()
-                if embedding in ["fourier", "pca"]:
-                    config["embedding"] = embedding
-
-                # Save results
-                save = input("Save results? (Y/n): ").strip().lower()
-                config["save_results"] = save != "n"
-
-                print("✅ Custom configuration set")
-            else:
-                print("✅ Standard analysis mode selected")
-
-        except ValueError:
-            print("⚠️  Invalid input, using default configuration")
-        except KeyboardInterrupt:
-            print("\n❌ Configuration cancelled")
-            return None
-
-        return config
-
-    def analyze_dataset(self, dataset: DatasetInfo, config: Dict) -> Dict:
-        """Analyze a single dataset"""
-        print(f"\n🔬 ANALYZING: {dataset.rule_name} - {dataset.get_processor_type()}")
-        print("=" * 60)
-
-        try:
-            # Load the dataset
-            print("📊 Loading dataset...")
-            df = pd.read_csv(
-                dataset.path,
-                index_col=(
-                    0 if dataset.path.stat().st_size < 100 * 1024 * 1024 else None
-                ),
-            )
-
-            # Limit samples if needed
-            if len(df) > config["max_samples"]:
-                print(
-                    f"🎯 Sampling {config['max_samples']:,} rows from {len(df):,} total"
-                )
-                df = df.sample(n=config["max_samples"], random_state=42)
-
-            print(f"📈 Dataset shape: {df.shape}")
-            print(
-                f"📝 Columns: {list(df.columns)[:10]}{'...' if len(df.columns) > 10 else ''}"
-            )
-
-            # Determine target column
-            target_col = None
-            if "target" in df.columns:
-                target_col = "target"
-            elif any(col.endswith("_target") for col in df.columns):
-                target_col = next(col for col in df.columns if col.endswith("_target"))
-
-            if target_col is None:
-                print("⚠️  No target column found. Using pattern detection...")
-                # For prefix-suffix matrices, assume 1s are positive examples
-                positive_rate = (df == 1).sum().sum() / (df.shape[0] * df.shape[1])
-                print(f"📊 Positive pattern rate: {positive_rate:.4f}")
-
-                # Create a synthetic analysis for matrices
-                result = self._analyze_matrix_dataset(df, dataset, config)
-            else:
-                # Standard ML analysis
-                result = self._analyze_ml_dataset(df, target_col, dataset, config)
-
-            return result
-
-        except Exception as e:
-            print(f"❌ Analysis failed: {e}")
-            return {"error": str(e), "dataset": dataset.name}
-
-    def _analyze_matrix_dataset(
-        self, df: pd.DataFrame, dataset: DatasetInfo, config: Dict
-    ) -> Dict:
-        """Analyze prefix-suffix matrix datasets"""
-        print("🧮 Matrix analysis mode...")
-
-        # Basic statistics
-        total_cells = df.shape[0] * df.shape[1]
-        positive_cells = (df == 1).sum().sum()
-        positive_rate = positive_cells / total_cells
-
-        # Row and column statistics
-        row_stats = df.sum(axis=1).describe()
-        col_stats = df.sum(axis=0).describe()
-
-        # Find best patterns
-        best_rows = df.sum(axis=1).nlargest(5)
-        best_cols = df.sum(axis=0).nlargest(5)
-
-        result = {
-            "dataset_name": dataset.name,
-            "dataset_type": "matrix",
-            "shape": df.shape,
-            "total_cells": total_cells,
-            "positive_cells": int(positive_cells),
-            "positive_rate": positive_rate,
-            "row_stats": row_stats.to_dict(),
-            "col_stats": col_stats.to_dict(),
-            "best_rows": best_rows.to_dict(),
-            "best_cols": best_cols.to_dict(),
-            "analysis_time": time.time(),
-        }
-
-        print(
-            f"📊 Positive rate: {positive_rate:.4f} ({positive_cells:,}/{total_cells:,})"
-        )
-        print(
-            f"🏆 Best row (prefix): {best_rows.index[0]} ({best_rows.iloc[0]} matches)"
-        )
-        print(
-            f"🏆 Best column (suffix): {best_cols.index[0]} ({best_cols.iloc[0]} matches)"
-        )
-
-        return result
-
-    def _analyze_ml_dataset(
-        self, df: pd.DataFrame, target_col: str, dataset: DatasetInfo, config: Dict
-    ) -> Dict:
-        """Analyze ML-ready datasets using the discovery engine"""
-        print("🤖 ML analysis mode...")
-
-        # Extract features and targets
-        feature_cols = [col for col in df.columns if col != target_col]
-        X = df[feature_cols]
-        y = df[target_col]
-
-        positive_rate = y.mean()
-        print(f"📊 Positive rate: {positive_rate:.4f} ({y.sum():,}/{len(y):,})")
-
-        if positive_rate == 0 or positive_rate == 1:
-            print("⚠️  No variation in target - skipping ML analysis")
+    from ..utils.math_utils import generate_mathematical_features
+    from ..utils.embedding_utils import fourier_transform, pca_transform
+except ImportError:
+    try:
+        from utils.math_utils import generate_mathematical_features
+        from utils.embedding_utils import fourier_transform, pca_transform
+    except ImportError:
+        print("⚠️  Utils not available - using basic features only")
+
+        def generate_mathematical_features(n, **kwargs):
+            """Fallback feature generator"""
             return {
-                "dataset_name": dataset.name,
-                "dataset_type": "ml",
-                "error": "No variation in target variable",
-                "positive_rate": positive_rate,
+                "number": n,
+                "mod_2": n % 2,
+                "mod_3": n % 3,
+                "mod_5": n % 5,
+                "mod_7": n % 7,
+                "mod_10": n % 10,
+                "last_digit": n % 10,
+                "digit_sum": sum(int(d) for d in str(n)),
+                "is_prime_candidate": int(n % 6 in [1, 5]) if n > 3 else 0,
             }
 
-        # Create a synthetic target function for the discovery engine
-        def synthetic_target(n):
-            # This is a placeholder - in practice we'd need the original rule
-            return n % 2 == 0  # Placeholder
+        def fourier_transform(sequence, n_components=None):
+            """Fallback fourier transform"""
+            return list(sequence)[:8] if sequence else [0] * 8
 
-        # Initialize discovery engine
-        try:
-            print("🔧 Initializing discovery engine...")
+        def pca_transform(data, n_components=2):
+            """Fallback PCA"""
+            return [
+                [row[i] if i < len(row) else 0 for i in range(n_components)]
+                for row in data
+            ]
 
-            # Use a smaller scope for analysis
-            max_num = min(config["max_samples"], 10000)  # Reasonable limit
 
-            discoverer = UniversalMathDiscovery(
-                target_function=synthetic_target,
-                function_name=f"Analysis of {dataset.rule_name}",
-                max_number=max_num,
-                embedding=config.get("embedding"),
-            )
+def powers_of_2(n: int) -> bool:
+    """Example target function - powers of 2"""
+    return n > 0 and (n & (n - 1)) == 0
 
-            # Override the data with our loaded dataset
-            print("📊 Running pattern discovery...")
-            discoverer.X = X
-            discoverer.y = y.values
-            discoverer.feature_names = feature_cols
 
-            # Train models
-            models = discoverer.train_discovery_models()
+class UniversalMathDiscovery:
+    """
+    Universal Mathematical Discovery Engine
 
-            # Analyze discoveries
-            feature_importance = discoverer.analyze_mathematical_discoveries()
+    Pure machine learning approach to mathematical pattern discovery.
+    No hard-coded mathematical knowledge required.
+    """
 
-            # Extract rules if not in quick mode
-            if not config.get("quick_mode", False):
-                rule_tree, rules = discoverer.extract_mathematical_rules()
-            else:
-                rule_tree, rules = None, "Skipped in quick mode"
+    def __init__(
+        self,
+        target_function: Callable[[int], bool],
+        function_name: str = "Mathematical Function",
+        max_number: int = 100000,
+        embedding: Optional[str] = None,
+        embedding_components: Optional[int] = None,
+    ):
+        """
+        Initialize the discovery engine.
 
-            result = {
-                "dataset_name": dataset.name,
-                "dataset_type": "ml",
-                "shape": df.shape,
-                "positive_rate": positive_rate,
-                "feature_count": len(feature_cols),
-                "model_performance": {
-                    name: {
-                        "train_acc": info["train_accuracy"],
-                        "test_acc": info["test_accuracy"],
-                        "test_auc": info["test_auc"],
-                    }
-                    for name, info in models.items()
-                },
-                "top_features": (
-                    feature_importance.head(10).to_dict("records")
-                    if feature_importance is not None
-                    else []
-                ),
-                "rules_summary": (
-                    rules[:500] if isinstance(rules, str) else str(rules)[:500]
-                ),
-                "analysis_time": time.time(),
-            }
+        Args:
+            target_function: Function to discover patterns for
+            function_name: Descriptive name for the function
+            max_number: Maximum number to test
+            embedding: Optional embedding type ('fourier', 'pca')
+            embedding_components: Number of embedding components
+        """
+        self.target_function = target_function
+        self.function_name = function_name
+        self.max_number = max_number
+        self.embedding = embedding
+        self.embedding_components = embedding_components or 8
 
-            # Show results
-            print("\n🏆 Model Performance:")
-            for name, perf in result["model_performance"].items():
-                print(
-                    f"  {name}: Test Acc = {perf['test_acc']:.3f}, AUC = {perf['test_auc']:.3f}"
-                )
+        # Data containers
+        self.X = None
+        self.y = None
+        self.feature_names = []
+        self.models = {}
+        self.scaler = StandardScaler()
 
-            if result["top_features"]:
-                print("\n🎯 Top Features:")
-                for feat in result["top_features"][:5]:
-                    print(f"  {feat['feature']}: {feat['importance']:.4f}")
+        # Training data splits
+        self.X_train = None
+        self.X_test = None
+        self.y_train = None
+        self.y_test = None
 
-            return result
+    def generate_target_data(self) -> Tuple[pd.DataFrame, np.ndarray]:
+        """Generate feature data for the target function"""
+        print(f"🔢 Generating data for: {self.function_name}")
+        print(f"   Testing numbers 1 to {self.max_number:,}")
 
-        except Exception as e:
-            print(f"❌ ML analysis failed: {e}")
-            return {
-                "dataset_name": dataset.name,
-                "dataset_type": "ml",
-                "error": str(e),
-                "positive_rate": positive_rate,
-            }
+        features_list = []
+        target_list = []
+        history = []
 
-    def run_comprehensive_analysis(
-        self, datasets: List[DatasetInfo], config: Dict
-    ) -> List[Dict]:
-        """Run analysis on multiple datasets"""
-        print(f"\n🚀 COMPREHENSIVE ANALYSIS")
-        print("=" * 50)
-        print(f"Analyzing {len(datasets)} datasets...")
-
-        results = []
         start_time = time.time()
 
-        for i, dataset in enumerate(datasets, 1):
-            print(f"\n[{i}/{len(datasets)}] Processing: {dataset.name}")
+        for n in range(1, self.max_number + 1):
+            # Check if n satisfies the target function
+            is_target = self.target_function(n)
 
-            result = self.analyze_dataset(dataset, config)
-            results.append(result)
+            # Generate mathematical features
+            features = generate_mathematical_features(
+                n,
+                previous_numbers=history[-5:] if history else None,
+                window_size=5,
+                digit_tensor=(self.embedding is not None),
+            )
 
-            # Save intermediate results
-            if config.get("save_results", True):
-                self._save_intermediate_results(results, i, len(datasets))
+            features_list.append(features)
+            target_list.append(1 if is_target else 0)
+
+            if is_target:
+                history.append(n)
+
+            # Progress update
+            if n % 10000 == 0:
+                elapsed = time.time() - start_time
+                rate = n / elapsed if elapsed > 0 else 0
+                found = sum(target_list)
+                density = found / n
+                print(
+                    f"   Progress: {n:,}/{self.max_number:,} ({100*n/self.max_number:.1f}%) "
+                    f"- Found: {found:,} ({density:.4f}) - Rate: {rate:.0f}/sec"
+                )
+
+        # Convert to DataFrame
+        self.X = pd.DataFrame(features_list)
+        self.y = np.array(target_list)
+        self.feature_names = list(self.X.columns)
+
+        # Add embeddings if requested
+        if self.embedding:
+            self._add_embeddings()
 
         total_time = time.time() - start_time
-        print(f"\n✅ Comprehensive analysis complete in {total_time:.1f}s")
+        positive_count = sum(target_list)
 
-        # Generate comparative summary
-        if config.get("comparative_analysis", True) and len(results) > 1:
-            self._generate_comparative_summary(results)
+        print(f"✅ Generated {len(self.X)} samples in {total_time:.1f}s")
+        print(f"   Features: {len(self.feature_names)}")
+        print(
+            f"   Positive examples: {positive_count:,} ({positive_count/len(self.X):.4f})"
+        )
 
-        return results
+        return self.X, self.y
 
-    def _save_intermediate_results(
-        self, results: List[Dict], current: int, total: int
-    ) -> None:
-        """Save intermediate results"""
-        try:
-            output_file = Path("analysis_results.json")
-            with open(output_file, "w") as f:
-                json.dump(
-                    {
-                        "progress": f"{current}/{total}",
-                        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-                        "results": results,
-                    },
-                    f,
-                    indent=2,
-                    default=str,
-                )
-        except:
-            pass  # Fail silently for intermediate saves
+    def _add_embeddings(self):
+        """Add embedding features to the dataset"""
+        print(f"🌀 Adding {self.embedding} embeddings...")
 
-    def _generate_comparative_summary(self, results: List[Dict]) -> None:
-        """Generate comparative analysis summary"""
-        print(f"\n📊 COMPARATIVE ANALYSIS SUMMARY")
-        print("=" * 50)
+        if self.embedding == "fourier":
+            # Extract digit tensors for Fourier transform
+            digit_tensors = []
+            for _, row in self.X.iterrows():
+                if "digit_tensor" in row:
+                    digit_tensors.append(row["digit_tensor"])
+                else:
+                    # Fallback: use digits of the number
+                    digits = [int(d) for d in str(row["number"])]
+                    digit_tensors.append(digits[:6] + [0] * max(0, 6 - len(digits)))
 
-        # Group results by type
-        matrix_results = [r for r in results if r.get("dataset_type") == "matrix"]
-        ml_results = [r for r in results if r.get("dataset_type") == "ml"]
-
-        if matrix_results:
-            print(f"\n🧮 Matrix Datasets ({len(matrix_results)}):")
-            matrix_results.sort(key=lambda x: x.get("positive_rate", 0), reverse=True)
-            for result in matrix_results[:5]:  # Top 5
-                name = result["dataset_name"]
-                rate = result.get("positive_rate", 0)
-                print(f"  📈 {name}: {rate:.4f} positive rate")
-
-        if ml_results:
-            print(f"\n🤖 ML Datasets ({len(ml_results)}):")
-            # Sort by best test accuracy
-            valid_ml = [
-                r
-                for r in ml_results
-                if "model_performance" in r and r["model_performance"]
+            # Apply Fourier transform
+            fourier_features = [
+                fourier_transform(tensor, self.embedding_components)
+                for tensor in digit_tensors
             ]
-            if valid_ml:
-                for result in valid_ml:
-                    name = result["dataset_name"]
-                    best_acc = max(
-                        (
-                            perf["test_acc"]
-                            for perf in result["model_performance"].values()
-                        ),
-                        default=0,
-                    )
-                    print(f"  🎯 {name}: {best_acc:.3f} best accuracy")
 
-        # Overall insights
-        print(f"\n💡 Key Insights:")
-        total_datasets = len(results)
-        successful = len([r for r in results if "error" not in r])
-        print(f"  • {successful}/{total_datasets} datasets analyzed successfully")
-
-        if ml_results:
-            avg_acc = np.mean(
-                [
-                    max(perf["test_acc"] for perf in r["model_performance"].values())
-                    for r in ml_results
-                    if "model_performance" in r and r["model_performance"]
+            # Add to dataframe
+            for i in range(self.embedding_components):
+                self.X[f"fourier_{i}"] = [
+                    f[i] if i < len(f) else 0 for f in fourier_features
                 ]
-            )
-            print(f"  • Average ML accuracy: {avg_acc:.3f}")
 
-        if matrix_results:
-            avg_pos_rate = np.mean([r.get("positive_rate", 0) for r in matrix_results])
-            print(f"  • Average matrix positive rate: {avg_pos_rate:.4f}")
+        elif self.embedding == "pca":
+            # Extract digit tensors for PCA
+            digit_tensors = []
+            for _, row in self.X.iterrows():
+                if "digit_tensor" in row:
+                    digit_tensors.append(row["digit_tensor"])
+                else:
+                    digits = [int(d) for d in str(row["number"])]
+                    digit_tensors.append(digits[:6] + [0] * max(0, 6 - len(digits)))
 
-    def run_interactive_session(self) -> None:
-        """Main interactive session"""
-        print("🧮 INTERACTIVE MATHEMATICAL PATTERN DISCOVERY")
-        print("=" * 60)
-        print("Analyze datasets generated by the Universal Dataset Generator")
-        print("and discover mathematical patterns automatically!")
-        print()
+            # Apply PCA
+            pca_features = pca_transform(digit_tensors, self.embedding_components)
 
-        try:
-            # Step 1: Scan for datasets
-            datasets = self.scan_for_datasets()
-            if not datasets:
-                return
+            # Add to dataframe
+            for i in range(self.embedding_components):
+                self.X[f"pca_{i}"] = [f[i] for f in pca_features]
 
-            # Step 2: Display available datasets
-            self.display_available_datasets(datasets)
+        # Update feature names
+        self.feature_names = list(self.X.columns)
+        print(f"   Added {self.embedding} features, total: {len(self.feature_names)}")
 
-            # Step 3: Select datasets
-            selected_datasets = self.select_datasets(datasets)
-            if not selected_datasets:
-                print("❌ No datasets selected. Exiting.")
-                return
+    def train_discovery_models(self) -> Dict[str, Dict]:
+        """Train multiple models for pattern discovery"""
+        print(f"\n🤖 Training discovery models...")
 
-            # Step 4: Configure analysis
-            config = self.configure_analysis()
-            if config is None:
-                return
+        if self.X is None or self.y is None:
+            print("   Generating data first...")
+            self.generate_target_data()
 
-            # Step 5: Run analysis
-            if len(selected_datasets) == 1:
-                print(f"\n🔬 Analyzing single dataset...")
-                result = self.analyze_dataset(selected_datasets[0], config)
-                results = [result]
+        # Split the data
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
+            self.X, self.y, test_size=0.2, random_state=42, stratify=self.y
+        )
+
+        # Scale features
+        X_train_scaled = self.scaler.fit_transform(self.X_train)
+        X_test_scaled = self.scaler.transform(self.X_test)
+
+        print(f"   Training: {len(self.X_train):,} samples")
+        print(f"   Testing: {len(self.X_test):,} samples")
+        print(f"   Features: {len(self.feature_names)}")
+
+        # Define models
+        models_config = {
+            "logistic": LogisticRegression(random_state=42, max_iter=2000),
+            "decision_tree": DecisionTreeClassifier(
+                random_state=42, max_depth=12, min_samples_split=50
+            ),
+            "random_forest": RandomForestClassifier(
+                n_estimators=200,
+                random_state=42,
+                max_depth=15,
+                min_samples_split=10,
+                n_jobs=-1,
+            ),
+            "gradient_boost": GradientBoostingClassifier(
+                n_estimators=100, random_state=42, max_depth=8, learning_rate=0.1
+            ),
+        }
+
+        # Train models
+        for name, model in models_config.items():
+            print(f"   Training {name}...")
+
+            if name == "logistic":
+                model.fit(X_train_scaled, self.y_train)
+                train_pred = model.predict(X_train_scaled)
+                test_pred = model.predict(X_test_scaled)
+                test_proba = model.predict_proba(X_test_scaled)[:, 1]
             else:
-                results = self.run_comprehensive_analysis(selected_datasets, config)
+                model.fit(self.X_train, self.y_train)
+                train_pred = model.predict(self.X_train)
+                test_pred = model.predict(self.X_test)
+                test_proba = model.predict_proba(self.X_test)[:, 1]
 
-            # Step 6: Save final results
-            if config.get("save_results", True):
-                output_file = Path("final_analysis_results.json")
-                with open(output_file, "w") as f:
-                    json.dump(
-                        {
-                            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-                            "config": config,
-                            "datasets_analyzed": len(selected_datasets),
-                            "results": results,
-                        },
-                        f,
-                        indent=2,
-                        default=str,
+            # Calculate metrics
+            train_acc = (train_pred == self.y_train).mean()
+            test_acc = (test_pred == self.y_test).mean()
+            test_auc = roc_auc_score(self.y_test, test_proba)
+
+            self.models[name] = {
+                "model": model,
+                "train_accuracy": train_acc,
+                "test_accuracy": test_acc,
+                "test_auc": test_auc,
+            }
+
+            print(
+                f"     Train: {train_acc:.4f}, Test: {test_acc:.4f}, AUC: {test_auc:.4f}"
+            )
+
+        return self.models
+
+    def analyze_mathematical_discoveries(
+        self, model_name: str = "random_forest"
+    ) -> Optional[pd.DataFrame]:
+        """Analyze mathematical patterns discovered by the model"""
+        print(f"\n🔍 Analyzing mathematical discoveries...")
+
+        if model_name not in self.models:
+            print(
+                f"   Model {model_name} not found. Available: {list(self.models.keys())}"
+            )
+            return None
+
+        model_info = self.models[model_name]
+        model = model_info["model"]
+
+        if hasattr(model, "feature_importances_"):
+            importances = model.feature_importances_
+            feature_importance = pd.DataFrame(
+                {"feature": self.feature_names, "importance": importances}
+            ).sort_values("importance", ascending=False)
+
+            print(f"🏆 Top Mathematical Patterns Discovered:")
+            print("-" * 50)
+            for _, row in feature_importance.head(15).iterrows():
+                print(f"  {row['importance']:8.4f} | {row['feature']}")
+
+            # Categorize discoveries
+            print(f"\n📊 Pattern Categories:")
+            print("-" * 25)
+
+            categories = {
+                "Modular Arithmetic": feature_importance[
+                    feature_importance["feature"].str.contains("mod_", na=False)
+                ],
+                "Digit Patterns": feature_importance[
+                    feature_importance["feature"].str.contains("digit", na=False)
+                ],
+                "Prime-Related": feature_importance[
+                    feature_importance["feature"].str.contains(
+                        "prime|6n|twin", na=False
                     )
-                print(f"\n💾 Results saved to: {output_file}")
+                ],
+                "Embeddings": feature_importance[
+                    feature_importance["feature"].str.contains("fourier|pca", na=False)
+                ],
+                "Sequence": feature_importance[
+                    feature_importance["feature"].str.contains(
+                        "diff|ratio|mean|std", na=False
+                    )
+                ],
+            }
 
-            print(f"\n✨ Interactive discovery session complete!")
-            print(f"🎯 Analyzed {len(selected_datasets)} datasets successfully")
+            for category, features in categories.items():
+                if len(features) > 0:
+                    importance_sum = features["importance"].sum()
+                    print(
+                        f"  {category}: {importance_sum:.4f} ({len(features)} features)"
+                    )
 
-        except KeyboardInterrupt:
-            print("\n❌ Session interrupted by user")
-        except Exception as e:
-            print(f"\n💥 Session failed: {e}")
+            return feature_importance
+        else:
+            print(f"   Model {model_name} doesn't support feature importance")
+            return None
+
+    def extract_mathematical_rules(self, max_depth: int = 6) -> Tuple[Any, str]:
+        """Extract interpretable mathematical rules"""
+        print(f"\n📜 Extracting mathematical rules...")
+
+        # Train interpretable tree
+        rule_tree = DecisionTreeClassifier(
+            max_depth=max_depth,
+            min_samples_split=200,
+            min_samples_leaf=100,
+            random_state=42,
+        )
+        rule_tree.fit(self.X_train, self.y_train)
+
+        # Extract rules as text
+        tree_rules = export_text(rule_tree, feature_names=self.feature_names)
+
+        # Performance
+        train_acc = rule_tree.score(self.X_train, self.y_train)
+        test_acc = rule_tree.score(self.X_test, self.y_test)
+
+        print(f"Rule Performance:")
+        print(f"  Train Accuracy: {train_acc:.4f}")
+        print(f"  Test Accuracy: {test_acc:.4f}")
+
+        print(f"\nDiscovered Rules (excerpt):")
+        print("-" * 30)
+        print(tree_rules[:1000] + "..." if len(tree_rules) > 1000 else tree_rules)
+
+        return rule_tree, tree_rules
+
+    def create_prediction_function(self, model_name: str = "random_forest"):
+        """Create a prediction function using the trained model"""
+        print(f"\n🎯 Creating prediction function using {model_name}...")
+
+        if model_name not in self.models:
+            print(f"   Model {model_name} not found")
+            return None
+
+        model_info = self.models[model_name]
+        model = model_info["model"]
+
+        def predict_number(n: int) -> Dict[str, Any]:
+            """Predict if a number matches the discovered pattern"""
+            try:
+                # Generate features for the number
+                features = generate_mathematical_features(n)
+
+                # Create feature vector matching training data
+                feature_vector = []
+                for feature_name in self.feature_names:
+                    if feature_name in features:
+                        feature_vector.append(features[feature_name])
+                    elif feature_name.startswith(("fourier_", "pca_")):
+                        # Handle embedding features
+                        feature_vector.append(0.0)  # Default for missing embeddings
+                    else:
+                        feature_vector.append(0.0)  # Default for missing features
+
+                X_pred = np.array(feature_vector).reshape(1, -1)
+
+                # Scale if using logistic regression
+                if model_name == "logistic":
+                    X_pred = self.scaler.transform(X_pred)
+
+                # Make prediction
+                prediction = model.predict(X_pred)[0]
+                probability = model.predict_proba(X_pred)[0, 1]
+
+                # Determine confidence
+                if probability > 0.85:
+                    confidence = "high"
+                elif probability > 0.65:
+                    confidence = "medium"
+                elif probability > 0.35:
+                    confidence = "low"
+                else:
+                    confidence = "very_low"
+
+                return {
+                    "number": n,
+                    "prediction": int(prediction),
+                    "probability": float(probability),
+                    "confidence": confidence,
+                    "method": f"ml_discovery_{model_name}",
+                }
+
+            except Exception as e:
+                return {
+                    "number": n,
+                    "prediction": 0,
+                    "probability": 0.0,
+                    "confidence": "error",
+                    "error": str(e),
+                }
+
+        return predict_number
+
+    def run_complete_discovery(self) -> Callable[[int], Dict[str, Any]]:
+        """Run the complete discovery pipeline"""
+        print("🚀 RUNNING COMPLETE MATHEMATICAL DISCOVERY")
+        print("=" * 60)
+        print(f"Function: {self.function_name}")
+        print(f"Scope: 1 to {self.max_number:,}")
+        if self.embedding:
+            print(f"Embedding: {self.embedding}")
+
+        # Step 1: Generate data
+        self.generate_target_data()
+
+        # Step 2: Train models
+        self.train_discovery_models()
+
+        # Step 3: Analyze discoveries
+        self.analyze_mathematical_discoveries()
+
+        # Step 4: Extract rules
+        self.extract_mathematical_rules()
+
+        # Step 5: Create prediction function
+        prediction_function = self.create_prediction_function()
+
+        print("\n" + "=" * 60)
+        print("🎉 DISCOVERY COMPLETE!")
+        print("=" * 60)
+        print("Mathematical patterns discovered and prediction function ready!")
+
+        return prediction_function
+
+
+# Utility functions for examples
+def is_perfect_square(n: int) -> bool:
+    """Check if n is a perfect square"""
+    root = int(n**0.5)
+    return root * root == n
+
+
+def is_fibonacci(n: int) -> bool:
+    """Check if n is a Fibonacci number"""
+
+    # A number is Fibonacci if one or both of (5*n^2 + 4) or (5*n^2 - 4) is a perfect square
+    def is_perfect_square_check(x):
+        if x < 0:
+            return False
+        root = int(x**0.5)
+        return root * root == x
+
+    return is_perfect_square_check(5 * n * n + 4) or is_perfect_square_check(
+        5 * n * n - 4
+    )
 
 
 def main():
-    """Main entry point"""
-    engine = InteractiveDiscoveryEngine()
-    engine.run_interactive_session()
+    """Example usage of the discovery engine"""
+    print("🧮 Universal Mathematical Discovery Engine - Example")
+    print("=" * 60)
+
+    # Example 1: Discover patterns in perfect squares
+    print("\nExample 1: Perfect Squares Discovery")
+    print("-" * 40)
+
+    discoverer = UniversalMathDiscovery(
+        target_function=is_perfect_square,
+        function_name="Perfect Squares",
+        max_number=1000,
+    )
+
+    prediction_fn = discoverer.run_complete_discovery()
+
+    # Test predictions
+    print("\n🧪 Testing discovered patterns:")
+    test_numbers = [16, 17, 25, 26, 36, 37, 49, 50, 64, 65]
+    for num in test_numbers:
+        result = prediction_fn(num)
+        actual = is_perfect_square(num)
+        status = "✅" if result["prediction"] == actual else "❌"
+        print(
+            f"  {status} {num:3d}: Predicted={result['prediction']}, "
+            f"Actual={actual}, Prob={result['probability']:.3f}"
+        )
 
 
 if __name__ == "__main__":
